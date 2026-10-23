@@ -102,6 +102,10 @@ export function DialerPanel({ project, update, onClose }: { project: Project; up
   </div>;
 }
 
+const YES_NO_OPTIONS = [{ value: '' as const, label: 'Not set' }, { value: 'yes' as const, label: 'Yes' }, { value: 'no' as const, label: 'No' }];
+const yesNo = (value: boolean | null) => (value === true ? 'yes' : value === false ? 'no' : '');
+const fromYesNo = (value: string) => (value === 'yes' ? true : value === 'no' ? false : null);
+
 export function RecordingsPanel({ project, update, onClose }: { project: Project; update: Update; onClose: () => void }) {
   const rec = project.recordings;
   const set = (patch: Partial<Project['recordings']>) => update(a => ({ ...a, recordings: { ...a.recordings, ...patch } }));
@@ -119,6 +123,12 @@ export function RecordingsPanel({ project, update, onClose }: { project: Project
         onChange={v => set({ schedulerSource: (v || null) as SchedulerSource | null })} />
       <TextArea label="Scheduler configuration: which calls to analyse" rows={5} value={rec.schedulerConfig}
         placeholder="e.g. Only calls longer than 30 seconds. Only dispositions Sale and Callback." onChange={schedulerConfig => set({ schedulerConfig })} />
+    </>}
+    {rec.via === 'api' && <>
+      <SelectField label="callback_url in the API request?" value={yesNo(rec.callbackUrl)} options={YES_NO_OPTIONS}
+        onChange={v => set({ callbackUrl: fromYesNo(v), ...(v === 'yes' ? {} : { subcategoryCallback: null }) })} />
+      {rec.callbackUrl === true && <SelectField label="enable_subcategory_callback = true?" value={yesNo(rec.subcategoryCallback)} options={YES_NO_OPTIONS}
+        onChange={v => set({ subcategoryCallback: fromYesNo(v) })} />}
     </>}
     <TextArea label="Notes" value={rec.notes} placeholder="Whose system they come from, anything else about them…" onChange={notes => set({ notes })} />
   </div>;

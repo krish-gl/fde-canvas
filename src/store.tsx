@@ -20,7 +20,7 @@ export const newProject = (name: string, products: Product[]): Project => ({
   leadIngestion: { methods: [], connectors: [], notes: '', status: 'open' },
   dialer: { clientDialer: null, provider: '', direction: null, notes: '', status: 'open' },
   transferTo: '',
-  recordings: { format: null, via: null, schedulerSource: null, schedulerConfig: '', notes: '', status: 'open' },
+  recordings: { format: null, via: null, schedulerSource: null, schedulerConfig: '', callbackUrl: null, subcategoryCallback: null, notes: '', status: 'open' },
   checklists: [], processors: [],
 });
 export const newProcessor = (slot: SlotKey): Processor => ({
@@ -53,6 +53,7 @@ const STAGE_TO_SLOT: Record<string, SlotKey> = {
 const str = (value: unknown) => (typeof value === 'string' ? value : '');
 const obj = (value: unknown): Record<string, unknown> => (value && typeof value === 'object' && !Array.isArray(value) ? (value as Record<string, unknown>) : {});
 const arr = (value: unknown): unknown[] => (Array.isArray(value) ? value : []);
+const bool = (value: unknown): boolean | null => (typeof value === 'boolean' ? value : null);
 
 const FORMATS: RecordingFormat[] = ['with_metadata', 'without_metadata', 'presigned_url'];
 const VIAS: RecordingVia[] = ['api', 'scheduler'];
@@ -69,6 +70,8 @@ function readRecordings(a: Record<string, unknown>): Project['recordings'] {
       via,
       schedulerSource: via === 'scheduler' && SCHEDULER_SOURCES.includes(r.schedulerSource as SchedulerSource) ? (r.schedulerSource as SchedulerSource) : null,
       schedulerConfig: via === 'scheduler' ? str(r.schedulerConfig) : '',
+      callbackUrl: via === 'api' ? bool(r.callbackUrl) : null,
+      subcategoryCallback: via === 'api' && r.callbackUrl === true ? bool(r.subcategoryCallback) : null,
       notes: str(r.notes),
       status: status(r.status),
     };
@@ -80,6 +83,8 @@ function readRecordings(a: Record<string, unknown>): Project['recordings'] {
     via,
     schedulerSource: via === 'scheduler' ? (/sftp/i.test(legacy) ? 'sftp' : 's3') : null,
     schedulerConfig: '',
+    callbackUrl: null,
+    subcategoryCallback: null,
     notes: legacy,
     status: status(a.recordingStatus),
   };

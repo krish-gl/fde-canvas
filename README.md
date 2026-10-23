@@ -57,7 +57,7 @@ A fresh copy starts with no projects. The example projects name real clients, so
     - A path that doesn't match the direction is hidden, unless it still holds processors; then it shows with a warning.
   - **Speech analytics:** recording ingestion → CDR / recording extraction → *resource listen pre processor (pre-analytics processor)*. Then checklist processing: each checklist lists its parameters, and each parameter has a *pre* and a *post processor* switch.
     - **With both products,** recordings are the voice bot's calls, arriving through the internal queue, so there's nothing to set up.
-    - **Speech analytics on its own:** what arrives for each call (with metadata, without metadata, or a presigned URL), and what picks it up: the speech analytics API, or a scheduler. A scheduler pulls from SFTP or S3, and its configuration says which calls to analyse (e.g. only calls over 30 seconds, only certain dispositions).
+    - **Speech analytics on its own:** what arrives for each call (with metadata, without metadata, or a presigned URL), and what picks it up: the speech analytics API, or a scheduler. With the API, whether the request carries a `callback_url`, and if so whether `enable_subcategory_callback` is true; each shows as a chip on the canvas when it is. A scheduler pulls from SFTP or S3, and its configuration says which calls to analyse (e.g. only calls over 30 seconds, only certain dispositions).
   - **Post call:** the *resource post processor*. This shows whether or not speech analytics is live.
   - **Enabled vs status:** these are two separate settings.
     - **Enabled / disabled** (the switch) says whether a point applies to this project. Disabled processors and unused points are **grey**.
@@ -91,6 +91,8 @@ Never put API keys, tokens or passwords in a processor's description: the file i
         "via": "scheduler",                                              // api | scheduler | null
         "schedulerSource": "s3",                                         // sftp | s3 | null (scheduler only)
         "schedulerConfig": "Only calls longer than 30 seconds",          // scheduler only
+        "callbackUrl": null,                                             // true | false | null (API only)
+        "subcategoryCallback": null,                                     // true | false | null (with a callback_url)
         "notes": "", "status": "open"
       },
       "checklists": [

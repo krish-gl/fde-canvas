@@ -49,12 +49,14 @@ SIP inbound has no lead ingestion: question 10 (the inbound pre call processor c
 |---|---|---|---|---|
 | 13a | What arrives for each call? | Speech analytics **only** (not with both products) | One of: With metadata / Without metadata / Presigned URL | `recordings.format` |
 | 13b | What picks the recordings up? | Speech analytics **only** | One of: Speech analytics API / Scheduler, plus optional note | `recordings.via`, `recordings.notes` |
+| 13b.1 | Does the API request include a callback_url? | Speech analytics only, and Speech analytics API picked in 13b | One of: Yes / No | `recordings.callbackUrl` |
+| 13b.2 | Is enable_subcategory_callback set to true? | Yes to 13b.1 | One of: Yes / No | `recordings.subcategoryCallback` |
 | 13c | Where does the scheduler pick them up from? | Speech analytics only, and Scheduler picked in 13b | One of: SFTP / S3, then a **Scheduler configuration** text box for which calls to analyse (e.g. only calls longer than 30 seconds, only certain dispositions) | `recordings.schedulerSource`, `recordings.schedulerConfig` |
 | 14 | Is there a resource listen pre processor (pre-analytics processor)? | Speech analytics | Processor yes/no | `resource_pre` processor |
 | 15 | Are any checklists mapped? | Speech analytics | Yes/no, then rows of checklist name + template ID | `checklists` |
 | 15.n | Which parameters of *checklist n* have processors? | One per checklist from 15 | Rows of parameter name + audit parameter ID, each with a Pre processor and Post processor switch and “What does it do?” | the checklist's `parameters`, `audit_pre` / `audit_post` processors |
 
-**Both products:** speech analytics gets the voice bot's own calls through the internal queue, so there's no recording ingestion to set up and questions 13a–13c aren't asked. On the canvas the Recordings box reads “Voice bot calls, via the internal queue” with no status and can't be edited. Recording details already stored are kept, and come back if the project goes back to speech analytics only.
+**Both products:** speech analytics gets the voice bot's own calls through the internal queue, so there's no recording ingestion to set up and questions 13a–13c (including 13b.1 and 13b.2) aren't asked. On the canvas the Recordings box reads “Voice bot calls, via the internal queue” with no status and can't be edited. Recording details already stored are kept, and come back if the project goes back to speech analytics only.
 
 ### Post call
 
@@ -102,6 +104,7 @@ On save, the project is tidied:
 - Empty rows in the during call list (no name, no description) are dropped; any other unnamed processor becomes “Unnamed processor”.
 - Connectors are trimmed and blanks dropped. If API isn't a lead method, connectors are cleared.
 - If recordings aren't picked up by a scheduler, the scheduler source and configuration are cleared; otherwise the configuration is trimmed.
+- If recordings aren't picked up by the speech analytics API, the callback_url answer is cleared; without a callback_url, the enable_subcategory_callback answer is cleared too.
 
 Everything new starts **open** (red); status is changed on the canvas, not in the questions.
 

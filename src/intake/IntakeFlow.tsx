@@ -71,7 +71,13 @@ function tidy(a: Project): Project {
     name: a.name.trim(),
     // Connectors only mean something while leads come in by API.
     // Scheduler details only mean something while a scheduler picks the recordings up.
-    recordings: a.recordings.via === 'scheduler' ? { ...a.recordings, schedulerConfig: a.recordings.schedulerConfig.trim() } : { ...a.recordings, schedulerSource: null, schedulerConfig: '' },
+    recordings: {
+      ...a.recordings,
+      ...(a.recordings.via === 'scheduler' ? { schedulerConfig: a.recordings.schedulerConfig.trim() } : { schedulerSource: null, schedulerConfig: '' }),
+      // callback_url only applies to API ingestion, and enable_subcategory_callback only with a callback_url.
+      ...(a.recordings.via === 'api' ? {} : { callbackUrl: null }),
+      ...(a.recordings.via === 'api' && a.recordings.callbackUrl === true ? {} : { subcategoryCallback: null }),
+    },
     leadIngestion: { ...a.leadIngestion, connectors: a.leadIngestion.methods.includes('api') ? a.leadIngestion.connectors.map(c => c.trim()).filter(Boolean) : [] },
     checklists: a.checklists
       .filter(c => c.name.trim() || c.templateId.trim() || c.parameters.length)

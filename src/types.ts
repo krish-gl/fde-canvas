@@ -57,6 +57,8 @@ export type Project = {
     via: RecordingVia | null;
     schedulerSource: SchedulerSource | null;   // scheduler only
     schedulerConfig: string;                   // scheduler only: which calls to analyse, e.g. duration or disposition filters
+    callbackUrl: boolean | null;               // API only: does the request carry a callback_url
+    subcategoryCallback: boolean | null;       // with a callback_url: is enable_subcategory_callback true
     notes: string;
     status: Status;
   };

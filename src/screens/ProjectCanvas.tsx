@@ -177,6 +177,8 @@ export default function ProjectCanvas({ projectId }: { projectId: string }) {
                         {recordings.format && <span className="node-chip">{RECORDING_FORMAT_LABEL[recordings.format]}</span>}
                         {recordings.via && <span className="node-chip">{recordings.via === 'scheduler' && recordings.schedulerSource
                           ? `Scheduler · ${SCHEDULER_SOURCE_LABEL[recordings.schedulerSource]}` : RECORDING_VIA_LABEL[recordings.via]}</span>}
+                        {recordings.via === 'api' && recordings.callbackUrl && <span className="node-chip">callback_url</span>}
+                        {recordings.via === 'api' && recordings.callbackUrl && recordings.subcategoryCallback && <span className="node-chip">enable_subcategory_callback</span>}
                       </div>
                       {recordings.via === 'scheduler' && recordings.schedulerConfig.trim() && <span className="node-sub">{recordings.schedulerConfig.trim().split('\n')[0]}</span>}
                     </>

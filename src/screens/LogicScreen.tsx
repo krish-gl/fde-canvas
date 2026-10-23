@@ -43,6 +43,8 @@ const NODES = {
 
   recFormat:     { col: 3, row: 2,  kind: 'question', section: 'Speech analytics', title: 'What arrives for each call?', options: optionsOf('recording_format'), w: 330 },
   recVia:        { col: 3, row: 3,  kind: 'question', section: 'Speech analytics', title: 'What picks the recordings up?', options: optionsOf('recording_via') },
+  callbackUrl:   { col: 3, row: 4,  kind: 'question', section: 'Speech analytics', title: 'callback_url in the API request?', options: YES_NO },
+  subcategory:   { col: 3, row: 5,  kind: 'question', section: 'Speech analytics', title: 'enable_subcategory_callback = true?', options: YES_NO },
   scheduler:     { col: 4, row: 4,  kind: 'question', section: 'Speech analytics', title: 'Scheduler: from SFTP or S3?', sub: 'Plus which calls to analyse' },
   resourcePre:   { col: 3, row: 13, kind: 'question', section: 'Speech analytics', title: 'Resource listen pre processor (pre-analytics processor)?', options: YES_NO },
   checklists:    { col: 3, row: 14, kind: 'question', section: 'Speech analytics', title: 'Any checklists mapped?', options: YES_NO },
@@ -69,7 +71,8 @@ function boxOf(id: Id): Box {
 //   across     side → facing side of a node on the same row
 //   sideDown   side → along the row to the target's column → down into its top
 //   downSide   bottom → down to the target's centre line → into its facing side
-type Route = 'down' | 'across' | 'sideDown' | 'downSide';
+//   bypass     left side → down a narrow lane beside the column, past the nodes below → into the target's top
+type Route = 'down' | 'across' | 'sideDown' | 'downSide' | 'bypass';
 type Edge = { from: Id; to: Id; route: Route; label?: string };
 
 const EDGES: Edge[] = [
@@ -98,7 +101,10 @@ const EDGES: Edge[] = [
   { from: 'routeProducts', to: 'resourcePost', route: 'downSide', label: 'No' },
 
   { from: 'recFormat', to: 'recVia', route: 'down' },
-  { from: 'recVia', to: 'resourcePre', route: 'down', label: 'Speech analytics API' },
+  { from: 'recVia', to: 'callbackUrl', route: 'down', label: 'Speech analytics API' },
+  { from: 'callbackUrl', to: 'subcategory', route: 'down', label: 'Yes' },
+  { from: 'callbackUrl', to: 'resourcePre', route: 'bypass', label: 'No' },
+  { from: 'subcategory', to: 'resourcePre', route: 'down', label: 'Yes · No' },
   { from: 'recVia', to: 'scheduler', route: 'sideDown', label: 'Scheduler' },
   { from: 'scheduler', to: 'resourcePre', route: 'downSide' },
   { from: 'resourcePre', to: 'checklists', route: 'down' },
@@ -122,6 +128,10 @@ function pointsOf({ from, to, route }: Edge): Point[] {
     case 'across': return [[toRight ? a.x + a.w : a.x, a.cy], [toRight ? b.x : b.x + b.w, b.cy]];
     case 'sideDown': return [[toRight ? a.x + a.w : a.x, a.cy], [b.cx, a.cy], [b.cx, b.y]];
     case 'downSide': return [[a.cx, a.y + a.h], [a.cx, b.cy], [toRight ? b.x : b.x + b.w, b.cy]];
+    case 'bypass': {
+      const laneX = a.x - 20, aboveB = b.y - 14, entryX = b.cx - 60;
+      return [[a.x, a.cy], [laneX, a.cy], [laneX, aboveB], [entryX, aboveB], [entryX, b.y]];
+    }
   }
 }
 

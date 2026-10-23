@@ -56,6 +56,9 @@ const hasAnalytics = (a: Project) => a.products.includes('speech_analytics');
 // With the voice bot as well, recordings arrive from its calls through the internal queue: nothing to ask.
 const recordingsAsked = (a: Project) => hasAnalytics(a) && !recordingsAutomatic(a);
 const schedulerAsked = (a: Project) => recordingsAsked(a) && a.recordings.via === 'scheduler';
+const callbackAsked = (a: Project) => recordingsAsked(a) && a.recordings.via === 'api';
+const subcategoryAsked = (a: Project) => callbackAsked(a) && a.recordings.callbackUrl === true;
+const yesNo = (value: boolean | null) => (value === true ? 'yes' : value === false ? 'no' : undefined);
 
 const PRODUCT_CHOICE: Record<string, Product[]> = { voicebot: ['voicebot'], speech_analytics: ['speech_analytics'], both: ['voicebot', 'speech_analytics'] };
 const productValue = (a: Project) =>
@@ -184,6 +187,20 @@ export const steps: Step[] = [
     get: a => a.recordings.via ?? undefined,
     set: (a, via) => ({ ...a, recordings: { ...a.recordings, via: via as RecordingVia } }),
     note: { get: a => a.recordings.notes, set: (a, notes) => ({ ...a, recordings: { ...a.recordings, notes } }), placeholder: 'Whose system they come from, anything else about them…' },
+  },
+  {
+    id: 'callback_url', section: 'Speech analytics', kind: 'choice', focus: ['recordings', 'cdr'], when: callbackAsked,
+    title: 'Does the API request include a callback_url?',
+    options: [{ value: 'yes', label: 'Yes', hint: 'We call it back with the results' }, { value: 'no', label: 'No' }],
+    get: a => yesNo(a.recordings.callbackUrl),
+    set: (a, v) => ({ ...a, recordings: { ...a.recordings, callbackUrl: v === 'yes' } }),
+  },
+  {
+    id: 'subcategory_callback', section: 'Speech analytics', kind: 'choice', focus: ['recordings', 'cdr'], when: subcategoryAsked,
+    title: 'Is enable_subcategory_callback set to true?',
+    options: [{ value: 'yes', label: 'Yes' }, { value: 'no', label: 'No' }],
+    get: a => yesNo(a.recordings.subcategoryCallback),
+    set: (a, v) => ({ ...a, recordings: { ...a.recordings, subcategoryCallback: v === 'yes' } }),
   },
   {
     id: 'scheduler', section: 'Speech analytics', kind: 'choice', focus: ['recordings', 'cdr'], when: schedulerAsked,

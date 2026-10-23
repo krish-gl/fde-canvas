@@ -54,7 +54,7 @@ A fresh copy starts with no projects. The example projects name real clients, so
     - **Both:** both paths, one above the other.
     - Every path joins at During call → *during call processors* (any number); Transfer? → *transfer call processor*.
     - A path that doesn't match the direction is hidden, unless it still holds processors; then it shows with a warning.
-  - **Speech analytics:** recordings → CDR / recording extraction → *resource listen pre processor*. Then checklist processing: each checklist lists its parameters, and each parameter has a *pre* and a *post processor* switch.
+  - **Speech analytics:** recordings → CDR / recording extraction → *resource listen pre processor (pre-analytics processor)*. Then checklist processing: each checklist lists its parameters, and each parameter has a *pre* and a *post processor* switch.
   - **Post call:** the *resource post processor*. This shows whether or not speech analytics is live.
   - **Enabled vs status:** these are two separate settings.
     - **Enabled / disabled** (the switch) says whether a point applies to this project. Disabled processors and unused points are **grey**.

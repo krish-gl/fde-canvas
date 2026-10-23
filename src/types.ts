@@ -104,7 +104,7 @@ export const SLOTS: Record<SlotKey, SlotInfo> = {
     when: 'Runs when the bot transfers the call, e.g. creating a ticket from the disposition, then hitting the dialer’s transfer API.',
   },
   resource_pre: {
-    label: 'Resource listen pre processor', section: 'speech_analytics', multi: false,
+    label: 'Resource listen pre processor (pre-analytics processor)', section: 'speech_analytics', multi: false,
     when: 'Org level, not checklist level. Runs on each recording after it’s extracted from the CDR and before checklists, e.g. enriching the request packet from a client API.',
   },
   // One per checklist parameter.

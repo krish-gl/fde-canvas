@@ -20,7 +20,7 @@ const NODES: Record<NodeId, Box> = {
   transfer:           { x: 900, y: 150, w: 200, h: H, label: 'Transfer call processor', section: 'voice' },
   recordings:         { x: 0,   y: 600, w: 180, h: H, label: 'Recordings', section: 'analytics' },
   cdr:                { x: 240, y: 600, w: 210, h: H, label: 'CDR → recording extraction', section: 'analytics' },
-  resource_pre:       { x: 240, y: 750, w: 210, h: H, label: 'Resource listen pre processor', section: 'analytics' },
+  resource_pre:       { x: 240, y: 750, w: 210, h: H, label: 'Resource listen pre processor (pre-analytics)', section: 'analytics' },
   checklists:         { x: 520, y: 600, w: 300, h: H, label: 'Checklist processing', section: 'analytics' },
   audit_pre:          { x: 520, y: 750, w: 140, h: H, label: 'Parameter pre', section: 'analytics' },
   audit_post:         { x: 680, y: 750, w: 140, h: H, label: 'Parameter post', section: 'analytics' },

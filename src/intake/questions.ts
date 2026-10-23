@@ -160,7 +160,7 @@ export const steps: Step[] = [
   },
   {
     id: 'resource_pre', section: 'Speech analytics', kind: 'processor', slot: 'resource_pre', focus: ['resource_pre'], when: hasAnalytics,
-    title: 'Is there a resource listen pre processor?', hint: 'Org level, not checklist level.', info: SLOTS.resource_pre.when,
+    title: 'Is there a resource listen pre processor (pre-analytics processor)?', hint: 'Org level, not checklist level.', info: SLOTS.resource_pre.when,
   },
   {
     id: 'checklists', section: 'Speech analytics', kind: 'checklists', focus: ['checklists'], when: hasAnalytics,

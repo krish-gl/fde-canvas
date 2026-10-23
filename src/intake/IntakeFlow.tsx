@@ -18,10 +18,11 @@ type Phase = 'asking' | 'review';
 function isAnswered(step: Step, a: Project, saidNo: Set<string>): boolean {
   switch (step.kind) {
     case 'name': return !!a.name.trim();
+    case 'text': return !!step.get(a).trim();
     case 'choice': return step.get(a) !== undefined;
     case 'multi': return step.get(a).length > 0;
     case 'processor': case 'processors': return slotAnswer(a, step.slot, saidNo) !== undefined;
-    case 'checklists': return a.checklists.length > 0 || saidNo.has('checklists');
+    case 'checklists': return a.checklists.some(c => c.name.trim() || c.templateId.trim());
     case 'parameters': return (a.checklists.find(c => c.id === step.checklistId)?.parameters.length ?? 0) > 0;
   }
 }
@@ -31,6 +32,7 @@ function summary(step: Step, a: Project, saidNo: Set<string>): string {
   const firstLine = (text: string) => text.split('\n')[0].slice(0, 80);
   switch (step.kind) {
     case 'name': return a.name || '—';
+    case 'text': return step.get(a).trim() || '—';
     case 'choice': {
       const v = step.get(a);
       if (v === undefined) return '—';
@@ -53,7 +55,10 @@ function summary(step: Step, a: Project, saidNo: Set<string>): string {
       const on = slotProcessors(a, step.slot).filter(p => p.enabled);
       return on.length ? on.map(p => p.name || 'Unnamed').join(', ') : slotAnswer(a, step.slot, saidNo) === 'no' ? 'None' : '—';
     }
-    case 'checklists': return a.checklists.length ? a.checklists.map(c => c.name || 'Unnamed').join(', ') : saidNo.has('checklists') ? 'None' : '—';
+    case 'checklists': {
+      const named = a.checklists.filter(c => c.name.trim() || c.templateId.trim());
+      return named.length ? named.map(c => c.name.trim() || `Template ${c.templateId.trim()}`).join(', ') : '—';
+    }
     case 'parameters': {
       const c = a.checklists.find(c => c.id === step.checklistId);
       if (!c?.parameters.length) return '—';
@@ -73,6 +78,7 @@ function tidy(a: Project): Project {
     // Scheduler details only mean something while a scheduler picks the recordings up.
     recordings: {
       ...a.recordings,
+      dedupeKey: a.recordings.dedupeKey.trim(),
       ...(a.recordings.via === 'scheduler' ? { schedulerConfig: a.recordings.schedulerConfig.trim() } : { schedulerSource: null, schedulerConfig: '' }),
       // callback_url only applies to API ingestion, and enable_subcategory_callback only with a callback_url.
       ...(a.recordings.via === 'api' ? {} : { callbackUrl: null }),
@@ -102,7 +108,11 @@ export default function IntakeFlow({ projectId }: { projectId?: string }) {
   const step = visible[Math.min(index, visible.length - 1)];
   const exitTo = () => navigate(editing ? { screen: 'project', projectId: project.id } : { screen: 'projects' });
 
-  useEffect(() => { setNoteOpen(!!(step.note && step.note.get(project).trim())); }, [step.id]); // eslint-disable-line react-hooks/exhaustive-deps
+  useEffect(() => {
+    setNoteOpen(!!(step.note && step.note.get(project).trim()));
+    // Speech analytics can't run without a checklist, so the checklists question opens with a row to fill in.
+    if (step.kind === 'checklists' && !project.checklists.length) setProject(addChecklist);
+  }, [step.id]); // eslint-disable-line react-hooks/exhaustive-deps
 
   const update = (change: (a: Project) => Project) => setProject(change);
   const markNo = (key: string, no: boolean) => setSaidNo(prev => { const next = new Set(prev); if (no) next.add(key); else next.delete(key); return next; });
@@ -125,19 +135,15 @@ export default function IntakeFlow({ projectId }: { projectId?: string }) {
     } else if (step.kind === 'processors') {
       if (value === 'yes') { update(a => { const on = slotProcessors(a, step.slot); return on.length ? { ...a, processors: a.processors.map(p => (p.slot === step.slot ? { ...p, enabled: true } : p)) } : addProcessorTo(a, step.slot); }); markNo(step.slot, false); }
       else { update(a => ({ ...a, processors: a.processors.filter(p => p.slot !== step.slot || p.name.trim() || p.description.trim()).map(p => (p.slot === step.slot ? { ...p, enabled: false } : p)) })); markNo(step.slot, true); advanceSoon(); }
-    } else if (step.kind === 'checklists') {
-      if (value === 'yes') { update(a => (a.checklists.length ? a : addChecklist(a))); markNo('checklists', false); }
-      else { update(a => ({ ...a, checklists: a.checklists.filter(c => c.name.trim() || c.templateId.trim() || c.parameters.length) })); markNo('checklists', true); advanceSoon(); }
     }
   };
 
   const options = step.kind === 'choice' || step.kind === 'multi' ? step.options
-    : step.kind === 'processor' || step.kind === 'processors' || step.kind === 'checklists' ? YES_NO : [];
+    : step.kind === 'processor' || step.kind === 'processors' ? YES_NO : [];
   const selected = (value: string) => {
     if (step.kind === 'choice') return step.get(project) === value;
     if (step.kind === 'multi') return step.get(project).includes(value);
     if (step.kind === 'processor' || step.kind === 'processors') return slotAnswer(project, step.slot, saidNo) === value;
-    if (step.kind === 'checklists') return value === 'yes' ? project.checklists.length > 0 : saidNo.has('checklists') && !project.checklists.length;
     return false;
   };
 
@@ -197,6 +203,8 @@ export default function IntakeFlow({ projectId }: { projectId?: string }) {
         {step.hint && <p className="intake-hint">{step.hint}</p>}
 
         <div className="intake-body">
+          {step.kind === 'text' && <input autoFocus className="intake-input" placeholder={step.placeholder} value={step.get(project)} onChange={e => update(a => step.set(a, e.target.value))} />}
+
           {step.kind === 'name' && <input autoFocus className="intake-input" placeholder="e.g. Acme Lending" value={project.name} onChange={e => update(a => ({ ...a, name: e.target.value }))} />}
 
           {options.length > 0 && <div className={`intake-options ${options.length > 5 ? 'two' : ''}`}>
@@ -228,7 +236,7 @@ export default function IntakeFlow({ projectId }: { projectId?: string }) {
 
           {step.kind === 'processors' && slotAnswer(project, step.slot, saidNo) === 'yes' && <ProcessorRows slot={step.slot} project={project} update={update} />}
 
-          {step.kind === 'checklists' && project.checklists.length > 0 && <div className="intake-rows">
+          {step.kind === 'checklists' && <div className="intake-rows">
             <p className="intake-hint intake-subhint">Add each checklist with its template ID. Their parameters come next.</p>
             {project.checklists.map((c, i) => <div key={c.id} className="intake-row">
               <input autoFocus={i === project.checklists.length - 1 && !c.name} className="field" placeholder="Checklist name, e.g. Consumer Payments - Support" value={c.name} onChange={e => update(a => setChecklist(a, c.id, { name: e.target.value }))} />

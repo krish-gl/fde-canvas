@@ -5,8 +5,8 @@ import { navigate } from '../router';
 import { ConfirmModal } from '../components/Modal';
 import { ProductPicker, SelectField, StatusControl, TextArea, TextField, Toggle } from '../components/fields';
 import {
-  DIRECTION_LABEL, LEAD_METHODS, RECORDING_FORMAT_LABEL, RECORDING_VIA_LABEL, SCHEDULER_SOURCE_LABEL, SLOTS,
-  type Project, type Direction, type Processor, type RecordingFormat, type RecordingVia, type SchedulerSource,
+  CONNECTION_LABEL, DIRECTION_LABEL, LEAD_METHODS, RECORDING_FORMAT_LABEL, RECORDING_VIA_LABEL, SCHEDULER_SOURCE_LABEL, SLOTS,
+  type Project, type Connection, type Direction, type Processor, type RecordingFormat, type RecordingVia, type SchedulerSource,
 } from '../types';
 import { addParameter, removeParameter, setParameter } from '../intake/questions';
 import type { Selection } from './ProjectCanvas';
@@ -94,6 +94,9 @@ export function DialerPanel({ project, update, onClose }: { project: Project; up
     <SelectField label="Client’s dialer integration?" value={whose}
       options={[{ value: '', label: 'Not set' }, { value: 'yes', label: 'Yes: their dialer, details pushed via API' }, { value: 'no', label: 'No: we dial' }]}
       onChange={v => set({ clientDialer: v === 'yes' ? true : v === 'no' ? false : null })} />
+    <SelectField label="How does the call reach the bot?" value={dialer.connection ?? ''}
+      options={[{ value: '', label: 'Not set' }, ...(Object.keys(CONNECTION_LABEL) as Connection[]).map(c => ({ value: c, label: CONNECTION_LABEL[c] }))]}
+      onChange={v => set({ connection: (v || null) as Connection | null })} />
     <SelectField label="Which way do the calls go?" value={dialer.direction ?? ''}
       options={[{ value: '', label: 'Not set' }, ...(Object.keys(DIRECTION_LABEL) as Direction[]).map(d => ({ value: d, label: DIRECTION_LABEL[d] }))]}
       onChange={v => set({ direction: (v || null) as Direction | null })} />
@@ -116,6 +119,7 @@ export function RecordingsPanel({ project, update, onClose }: { project: Project
     <StatusControl value={rec.status} onChange={status => set({ status })} />
     <SelectField label="What arrives for each call" value={rec.format ?? ''} options={choices(RECORDING_FORMAT_LABEL)}
       onChange={v => set({ format: (v || null) as RecordingFormat | null })} />
+    <TextField label="Dedupe key" mono value={rec.dedupeKey} placeholder="e.g. call_id" onChange={dedupeKey => set({ dedupeKey })} />
     <SelectField label="Picked up by" value={rec.via ?? ''} options={choices(RECORDING_VIA_LABEL)}
       onChange={v => set({ via: (v || null) as RecordingVia | null })} />
     {rec.via === 'scheduler' && <>

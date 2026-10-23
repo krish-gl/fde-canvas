@@ -5,7 +5,7 @@ import { ArrowDown, ArrowLeft, ArrowRight, Info, ListChecks, MessagesSquare, Plu
 import { newChecklist, newProcessor, parameterProcessor, useStore } from '../store';
 import { hrefFor, navigate } from '../router';
 import { ConfirmModal } from '../components/Modal';
-import { DIRECTION_LABEL, LEAD_METHODS, PRODUCTS, RECORDING_FORMAT_LABEL, RECORDING_VIA_LABEL, SCHEDULER_SOURCE_LABEL, SLOTS, recordingsAutomatic, type Project, type Checklist, type Processor, type SlotKey, type Status } from '../types';
+import { CONNECTION_LABEL, DIRECTION_LABEL, LEAD_METHODS, QUEUE_DEDUPE_KEY, PRODUCTS, RECORDING_FORMAT_LABEL, RECORDING_VIA_LABEL, SCHEDULER_SOURCE_LABEL, SLOTS, recordingsAutomatic, type Project, type Checklist, type Processor, type SlotKey, type Status } from '../types';
 import { ProjectPanel, ChecklistPanel, DialerPanel, LeadPanel, ProcessorPanel, RecordingsPanel } from './panels';
 
 export type Selection =
@@ -63,11 +63,11 @@ export default function ProjectCanvas({ projectId }: { projectId: string }) {
   const slotProps: SlotHelpers = { inSlot, isSelected, select, addProcessor, setEnabled, setStatus };
   const { leadIngestion, dialer, recordings } = project;
   // Direction decides the start of the call. Outbound: leads are ingested, pre-processed and dialled.
-  // SIP inbound: there's no lead ingestion; the customer calls in and the inbound pre call processor fetches
+  // Inbound: there's no lead ingestion; the customer calls in and the inbound pre call processor fetches
   // their details from the client's API instead. Until it's set, the outbound path shows.
   // A path that doesn't match the direction still shows if it holds processors, so nothing goes missing.
   const usesOutbound = dialer.direction !== 'inbound';
-  const usesInbound = dialer.direction === 'inbound' || dialer.direction === 'both';
+  const usesInbound = dialer.direction === 'inbound';
   const showOutbound = usesOutbound || (['pre_call', 'no_answer', 'pre_call_connected'] as const).some(s => inSlot(s).length);
   const showInbound = usesInbound || inSlot('inbound_pre_call').length > 0;
   const laneTitle = (name: string, used: boolean) =>
@@ -119,7 +119,7 @@ export default function ProjectCanvas({ projectId }: { projectId: string }) {
             <div className="arch-col wide">
               <Node status={dialer.status} title="Dialer: dials the calls" selected={isSelected({ kind: 'dialer' })} onClick={() => select({ kind: 'dialer' })}>
                 <span className="node-sub">{whose}{dialer.provider ? ` · ${dialer.provider}` : ''}</span>
-                <span className="node-sub">{dialer.direction ? DIRECTION_LABEL[dialer.direction] : 'Inbound or outbound? Not set'}</span>
+                <span className="node-sub">{dialer.direction ? DIRECTION_LABEL[dialer.direction] : 'Inbound or outbound? Not set'}{dialer.connection ? ` · ${CONNECTION_LABEL[dialer.connection]}` : ''}</span>
               </Node>
               <div className="arch-forks">
                 <div><Branch label="Customer doesn’t pick up" /><SingleSlot slot="no_answer" {...slotProps} /></div>
@@ -130,11 +130,11 @@ export default function ProjectCanvas({ projectId }: { projectId: string }) {
             </div>}
 
             {showInbound && <div className="arch-lane">
-              {laneTitle('SIP inbound', usesInbound)}
+              {laneTitle('Inbound', usesInbound)}
               <div className="arch-row">
                 <div className="arch-col">
                   <Node status={dialer.status} title="Customer calls in" selected={isSelected({ kind: 'dialer' })} onClick={() => select({ kind: 'dialer' })}>
-                    <span className="node-sub">SIP inbound{dialer.provider ? ` · ${dialer.provider}` : ''}</span>
+                    <span className="node-sub">{[dialer.connection && CONNECTION_LABEL[dialer.connection], 'inbound', dialer.provider].filter(Boolean).join(' · ')}</span>
                     <span className="node-sub">No lead ingestion: the lead is built from the call</span>
                   </Node>
                 </div>
@@ -169,12 +169,16 @@ export default function ProjectCanvas({ projectId }: { projectId: string }) {
             <div className="arch-col narrow">
               {recordingsAutomatic(project)
                 // Both products: the voice bot's calls reach speech analytics through the internal queue. Nothing to set up.
-                ? <Node title="Recordings from"><span className="node-sub">Voice bot calls, via the internal queue. No separate ingestion needed.</span></Node>
+                ? <Node title="Recordings from">
+                  <span className="node-sub">Voice bot calls, via the internal queue. No separate ingestion needed.</span>
+                  <div className="node-chips"><span className="node-chip">Dedupe key = {QUEUE_DEDUPE_KEY}</span></div>
+                </Node>
                 : <Node status={recordings.status} title="Recording ingestion" selected={isSelected({ kind: 'recordings' })} onClick={() => select({ kind: 'recordings' })}>
-                  {recordings.format || recordings.via
+                  {recordings.format || recordings.via || recordings.dedupeKey
                     ? <>
                       <div className="node-chips">
                         {recordings.format && <span className="node-chip">{RECORDING_FORMAT_LABEL[recordings.format]}</span>}
+                        {recordings.dedupeKey && <span className="node-chip">Dedupe key = {recordings.dedupeKey}</span>}
                         {recordings.via && <span className="node-chip">{recordings.via === 'scheduler' && recordings.schedulerSource
                           ? `Scheduler · ${SCHEDULER_SOURCE_LABEL[recordings.schedulerSource]}` : RECORDING_VIA_LABEL[recordings.via]}</span>}
                         {recordings.via === 'api' && recordings.callbackUrl && <span className="node-chip">callback_url</span>}
@@ -194,7 +198,7 @@ export default function ProjectCanvas({ projectId }: { projectId: string }) {
             <Arrow />
             <div className="arch-col widest">
               <Node title="Checklist processing">
-                <span className="node-sub">{project.checklists.length ? `${project.checklists.length} checklist${project.checklists.length === 1 ? '' : 's'}` : 'No checklists mapped'}</span>
+                <span className="node-sub">{project.checklists.length ? `${project.checklists.length} checklist${project.checklists.length === 1 ? '' : 's'}` : 'No checklists yet: analysis needs at least one'}</span>
               </Node>
               <div className="arch-checklists">
                 {project.checklists.map(checklist => <ChecklistCard key={checklist.id} checklist={checklist} project={project} slotProps={slotProps} />)}

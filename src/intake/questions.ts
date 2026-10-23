@@ -4,8 +4,8 @@
 // docs/question-logic.md and the How it works diagram (screens/LogicScreen.tsx) lay these out: update both when they change.
 import { newChecklist, newParameter, newProcessor, parameterProcessor } from '../store';
 import {
-  LEAD_METHODS, RECORDING_FORMAT_LABEL, RECORDING_VIA_LABEL, SCHEDULER_SOURCE_LABEL, SLOTS, recordingsAutomatic,
-  type Project, type Direction, type LeadMethod, type Processor, type Product, type RecordingFormat, type RecordingVia, type SchedulerSource, type SlotKey,
+  CONNECTION_LABEL, LEAD_METHODS, QUEUE_DEDUPE_KEY, RECORDING_FORMAT_LABEL, RECORDING_VIA_LABEL, SCHEDULER_SOURCE_LABEL, SLOTS, recordingsAutomatic,
+  type Project, type Connection, type Direction, type LeadMethod, type Processor, type Product, type RecordingFormat, type RecordingVia, type SchedulerSource, type SlotKey,
 } from '../types';
 
 export type NodeId =
@@ -31,6 +31,8 @@ type Base = {
 
 export type Step =
   | Base & { kind: 'name' }
+  // A short free-text answer, e.g. the dedupe key.
+  | Base & { kind: 'text'; placeholder: string; get: (a: Project) => string; set: (a: Project, text: string) => Project }
   | Base & {
       kind: 'choice'; options: Option[]; get: (a: Project) => string | undefined; set: (a: Project, value: string) => Project;
       // A text box shown under the options once one is picked, e.g. the scheduler's configuration.
@@ -48,10 +50,10 @@ export type Step =
   | Base & { kind: 'parameters'; checklistId: string };
 
 const hasVoice = (a: Project) => a.products.includes('voicebot');
-// Direction is asked first in the voice bot section and decides which path's questions follow.
+// Direction decides which path's questions follow: outbound or inbound, never both.
 // Until it's answered, the outbound path is assumed.
 const outbound = (a: Project) => hasVoice(a) && a.dialer.direction !== 'inbound';
-const inbound = (a: Project) => hasVoice(a) && (a.dialer.direction === 'inbound' || a.dialer.direction === 'both');
+const inbound = (a: Project) => hasVoice(a) && a.dialer.direction === 'inbound';
 const hasAnalytics = (a: Project) => a.products.includes('speech_analytics');
 // With the voice bot as well, recordings arrive from its calls through the internal queue: nothing to ask.
 const recordingsAsked = (a: Project) => hasAnalytics(a) && !recordingsAutomatic(a);
@@ -78,7 +80,7 @@ export const steps: Step[] = [
     options: [
       { value: 'voicebot', label: 'Voice bot', hint: 'Live calls handled by the bot', info: 'Brings in lead ingestion, the dialer, and the pre call, during call and transfer processors.' },
       { value: 'speech_analytics', label: 'Speech analytics', hint: 'Recorded calls analysed after the fact', info: 'Brings in recordings, the resource listen pre processor, checklists and audit parameter processors.' },
-      { value: 'both', label: 'Both', info: 'Every section applies. Speech analytics gets the voice bot’s calls through the internal queue, so there’s no separate recording source.' },
+      { value: 'both', label: 'Both', info: `Every section applies. Speech analytics gets the voice bot’s calls through the internal queue, so there’s no recording ingestion to set up, and the dedupe key is the ${QUEUE_DEDUPE_KEY}.` },
     ],
     get: productValue,
     set: (a, v) => ({ ...a, products: PRODUCT_CHOICE[v] ?? [] }),
@@ -86,13 +88,20 @@ export const steps: Step[] = [
 
   // Voice bot
   {
+    id: 'connection', section: 'Voice bot', kind: 'choice', focus: ['dialer', 'caller'], when: hasVoice,
+    title: 'How does the call reach the bot?',
+    info: 'The telephony connection. It applies to outbound and inbound calls alike.',
+    options: (Object.keys(CONNECTION_LABEL) as Connection[]).map(value => ({ value, label: CONNECTION_LABEL[value] })),
+    get: a => a.dialer.connection ?? undefined,
+    set: (a, v) => ({ ...a, dialer: { ...a.dialer, connection: v as Connection } }),
+  },
+  {
     id: 'direction', section: 'Voice bot', kind: 'choice', focus: ['lead', 'dialer', 'caller', 'inbound_pre_call'], when: hasVoice,
     title: 'Which way do the calls go?',
-    info: 'This decides how the call starts, so the next questions depend on it.',
+    info: 'This decides how the call starts, so the next questions depend on it. A project is one or the other, not both.',
     options: [
       { value: 'outbound', label: 'Outbound', hint: 'We call the leads', info: 'Leads are ingested, can go through a pre call processor, then the dialer calls them. Some won’t pick up.' },
-      { value: 'inbound', label: 'SIP inbound', hint: 'Customers call in', info: 'No lead ingestion. When a customer calls in, the inbound pre call processor calls the client’s API and enriches the lead attributes used during the call.' },
-      { value: 'both', label: 'Both', info: 'Both paths, joining at During call.' },
+      { value: 'inbound', label: 'Inbound', hint: 'Customers call in', info: 'No lead ingestion. When a customer calls in, the inbound pre call processor calls the client’s API and enriches the lead attributes used during the call.' },
     ],
     get: a => a.dialer.direction ?? undefined,
     set: (a, v) => ({ ...a, dialer: { ...a.dialer, direction: v as Direction } }),
@@ -178,6 +187,15 @@ export const steps: Step[] = [
     set: (a, format) => ({ ...a, recordings: { ...a.recordings, format: format as RecordingFormat } }),
   },
   {
+    id: 'dedupe_key', section: 'Speech analytics', kind: 'text', focus: ['recordings', 'cdr'], when: recordingsAsked,
+    title: 'What’s the dedupe key?',
+    hint: 'What identifies a call, so the same recording isn’t analysed twice.',
+    info: `With the voice bot too, recordings come through the internal queue and the dedupe key is the ${QUEUE_DEDUPE_KEY}, so this isn’t asked.`,
+    placeholder: 'e.g. call_id',
+    get: a => a.recordings.dedupeKey,
+    set: (a, dedupeKey) => ({ ...a, recordings: { ...a.recordings, dedupeKey } }),
+  },
+  {
     id: 'recording_via', section: 'Speech analytics', kind: 'choice', focus: ['recordings', 'cdr'], when: recordingsAsked,
     title: 'What picks the recordings up?',
     options: [
@@ -221,7 +239,8 @@ export const steps: Step[] = [
   },
   {
     id: 'checklists', section: 'Speech analytics', kind: 'checklists', focus: ['checklists'], when: hasAnalytics,
-    title: 'Are any checklists mapped?',
+    title: 'Which checklists are mapped?',
+    hint: 'Speech analytics needs at least one checklist to analyse calls.',
     info: 'Checklist processing runs each call against these checklists. A checklist has its own parameters, and each parameter can have a pre and a post processor.',
   },
 

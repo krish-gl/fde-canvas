@@ -47,17 +47,16 @@ A fresh copy starts with no projects. The example projects name real clients, so
   - **Checklists:** you list your checklists, then answer one question per checklist for its parameters and their pre and post processors.
   - **Review:** a review screen at the end lets you click any answer to change it.
 - **Project canvas:** the call architecture with this project's processors in place.
-  - **Voice bot:** the direction (outbound, SIP inbound or both) decides how the call starts, so it's the first voice bot question.
+  - **Voice bot:** first how the call reaches the bot (SIP, PSTN or WSB), which applies to either path. Then the direction, outbound or inbound (never both), which decides how the call starts.
     - **Outbound:** lead ingestion (API, SFTP, manual, S3 push; with API you also list the connectors, as many as there are) → *pre call processor* → dialer (the client's or ours, and the provider). The dialer branches two ways:
       - doesn't pick up → *no answer call processor*
       - picks up → *pre call connected processor*
-    - **SIP inbound:** there's no lead ingestion. The customer calls in → *inbound pre call processor* (`inbound_precall_processing`), which calls the client's API and enriches the lead attributes used during the call. For inbound, this is the lead ingestion.
-    - **Both:** both paths, one above the other.
+    - **Inbound:** there's no lead ingestion. The customer calls in → *inbound pre call processor* (`inbound_precall_processing`), which calls the client's API and enriches the lead attributes used during the call. For inbound, this is the lead ingestion.
     - Every path joins at During call → *during call processors* (any number); Transfer? → *transfer call processor*.
     - A path that doesn't match the direction is hidden, unless it still holds processors; then it shows with a warning.
-  - **Speech analytics:** recording ingestion → CDR / recording extraction → *resource listen pre processor (pre-analytics processor)*. Then checklist processing: each checklist lists its parameters, and each parameter has a *pre* and a *post processor* switch.
-    - **With both products,** recordings are the voice bot's calls, arriving through the internal queue, so there's nothing to set up.
-    - **Speech analytics on its own:** what arrives for each call (with metadata, without metadata, or a presigned URL), and what picks it up: the speech analytics API, or a scheduler. With the API, whether the request carries a `callback_url`, and if so whether `enable_subcategory_callback` is true; each shows as a chip on the canvas when it is. A scheduler pulls from SFTP or S3, and its configuration says which calls to analyse (e.g. only calls over 30 seconds, only certain dispositions).
+  - **Speech analytics:** recording ingestion → CDR / recording extraction → *resource listen pre processor (pre-analytics processor)*. Then checklist processing, which needs at least one checklist: each checklist lists its parameters, and each parameter has a *pre* and a *post processor* switch.
+    - **With both products,** recordings are the voice bot's calls, arriving through the internal queue, so there's nothing to set up, and **the dedupe key is the interaction ID**.
+    - **Speech analytics on its own:** what arrives for each call (with metadata, without metadata, or a presigned URL), the dedupe key (what identifies a call, e.g. `call_id`), and what picks it up: the speech analytics API, or a scheduler. With the API, whether the request carries a `callback_url`, and if so whether `enable_subcategory_callback` is true; each shows as a chip on the canvas when it is. A scheduler pulls from SFTP or S3, and its configuration says which calls to analyse (e.g. only calls over 30 seconds, only certain dispositions).
   - **Post call:** the *resource post processor*. This shows whether or not speech analytics is live.
   - **Enabled vs status:** these are two separate settings.
     - **Enabled / disabled** (the switch) says whether a point applies to this project. Disabled processors and unused points are **grey**.
@@ -71,7 +70,7 @@ Never put API keys, tokens or passwords in a processor's description: the file i
 
 ```jsonc
 {
-  "version": 7,
+  "version": 8,
   "exportedAt": "2026-10-23T10:00:00.000Z",
   "projects": [
     {
@@ -82,12 +81,14 @@ Never put API keys, tokens or passwords in a processor's description: the file i
       "leadIngestion": { "methods": ["api"], "connectors": ["LSQ"], "notes": "", "status": "open" },
                                                                          // methods: api | sftp | manual | s3
                                                                          // connectors: only used when methods has api
-      "dialer": { "clientDialer": true, "provider": "Ozonetel", "direction": "inbound", "notes": "", "status": "closed" },
+      "dialer": { "clientDialer": true, "provider": "Ozonetel", "connection": "sip", "direction": "inbound", "notes": "", "status": "closed" },
                                                                          // clientDialer: true | false | null
-                                                                         // direction: inbound | outbound | both | null
+                                                                         // connection: sip | pstn | wsb | null
+                                                                         // direction: inbound | outbound | null
       "transferTo": "",
       "recordings": {                                                    // speech analytics on its own
         "format": "with_metadata",                                       // with_metadata | without_metadata | presigned_url | null
+        "dedupeKey": "call_id",
         "via": "scheduler",                                              // api | scheduler | null
         "schedulerSource": "s3",                                         // sftp | s3 | null (scheduler only)
         "schedulerConfig": "Only calls longer than 30 seconds",          // scheduler only
@@ -119,7 +120,7 @@ Never put API keys, tokens or passwords in a processor's description: the file i
 ```
 
 `slot` is one of:
-- **Voice bot:** `pre_call`, `no_answer`, `pre_call_connected` (outbound), `inbound_pre_call` (SIP inbound), `during_call`, `transfer`
+- **Voice bot:** `pre_call`, `no_answer`, `pre_call_connected` (outbound), `inbound_pre_call` (inbound), `during_call`, `transfer`
 - **Speech analytics:** `resource_pre`, `audit_pre`, `audit_post` (the last two belong to a checklist parameter)
 - **Post call:** `resource_post`
 
@@ -133,8 +134,9 @@ You can edit the file by hand. On import:
   - An audit processor's parameter number becomes a parameter of its checklist.
   - Files from before projects were renamed keep their list under `accounts`; that's still read.
   - Anything without a status starts open.
-  - On a SIP inbound project, a *pre call connected* processor from before version 6 becomes the *inbound pre call processor*.
+  - On an inbound project, a *pre call connected* processor from before version 6 becomes the *inbound pre call processor*.
   - Before version 7, recordings were one free-text `recordingSource`. It becomes the recordings notes; "Our Speech Analytics API" becomes picked up by the API, and an SFTP or S3 source becomes a scheduler on that source. `recordingStatus` becomes the recordings status.
+  - Before version 8 a project could be inbound and outbound at once. Now it's one or the other, so such a project comes in with no direction set (its processors stay; pick the direction again). An inbound project from before version 8 gets SIP as its connection, since inbound used to mean SIP inbound.
   - Flows, file locations, links and update logs are dropped.
 - A file with no `projects` list, or a project with no name, is rejected with a message, and nothing in the browser changes.
 

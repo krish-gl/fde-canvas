@@ -6,7 +6,10 @@
 
 export type Product = 'voicebot' | 'speech_analytics';
 export type LeadMethod = 'api' | 'sftp' | 'manual' | 's3';
-export type Direction = 'inbound' | 'outbound' | 'both';
+// A voice bot project dials out or takes calls in, never both.
+export type Direction = 'inbound' | 'outbound';
+// How the call reaches the bot. Separate from direction: either path can use any of these.
+export type Connection = 'sip' | 'pstn' | 'wsb';
 // Speech analytics on its own: what arrives for each call, and what picks it up.
 export type RecordingFormat = 'with_metadata' | 'without_metadata' | 'presigned_url';
 export type RecordingVia = 'api' | 'scheduler';
@@ -48,13 +51,14 @@ export type Project = {
   notes: string;
   // connectors: the connectors leads come in through, when the method is API (several allowed).
   leadIngestion: { methods: LeadMethod[]; connectors: string[]; notes: string; status: Status };
-  dialer: { clientDialer: boolean | null; provider: string; direction: Direction | null; notes: string; status: Status };
+  dialer: { clientDialer: boolean | null; provider: string; connection: Connection | null; direction: Direction | null; notes: string; status: Status };
   transferTo: string;
   // How recordings reach speech analytics on its own. With the voice bot too, they come through the internal queue
   // and none of this applies (see recordingsAutomatic).
   recordings: {
     format: RecordingFormat | null;
     via: RecordingVia | null;
+    dedupeKey: string;                         // what identifies a call, so it isn't analysed twice
     schedulerSource: SchedulerSource | null;   // scheduler only
     schedulerConfig: string;                   // scheduler only: which calls to analyse, e.g. duration or disposition filters
     callbackUrl: boolean | null;               // API only: does the request carry a callback_url
@@ -66,10 +70,10 @@ export type Project = {
   processors: Processor[];
 };
 
-export type CanvasFile = { version: 7; exportedAt?: string; projects: Project[] };
+export type CanvasFile = { version: 8; exportedAt?: string; projects: Project[] };
 
 // With both products, speech analytics gets the voice bot's own calls through an internal queue, so there's no
-// recording source to set up. Recording source and status only apply to speech analytics on its own.
+// recording ingestion to set up, and the dedupe key is the interaction ID. Recordings only apply to speech analytics on its own.
 export const recordingsAutomatic = (project: Pick<Project, 'products'>) =>
   project.products.includes('voicebot') && project.products.includes('speech_analytics');
 
@@ -91,7 +95,10 @@ export const RECORDING_FORMAT_LABEL: Record<RecordingFormat, string> = {
 export const RECORDING_VIA_LABEL: Record<RecordingVia, string> = { api: 'Speech analytics API', scheduler: 'Scheduler' };
 export const SCHEDULER_SOURCE_LABEL: Record<SchedulerSource, string> = { sftp: 'SFTP', s3: 'S3' };
 
-export const DIRECTION_LABEL: Record<Direction, string> = { inbound: 'SIP inbound', outbound: 'Outbound', both: 'Inbound + outbound' };
+export const DIRECTION_LABEL: Record<Direction, string> = { outbound: 'Outbound', inbound: 'Inbound' };
+export const CONNECTION_LABEL: Record<Connection, string> = { sip: 'SIP', pstn: 'PSTN', wsb: 'WSB' };
+// With both products the dedupe key isn't asked: recordings come through the internal queue keyed by this.
+export const QUEUE_DEDUPE_KEY = 'interaction ID';
 
 export type SlotInfo = {
   label: string;
@@ -118,7 +125,7 @@ export const SLOTS: Record<SlotKey, SlotInfo> = {
   // Inbound path: there's no lead ingestion; this processor takes its place.
   inbound_pre_call: {
     label: 'Inbound pre call processor', section: 'voicebot', multi: false, hook: 'inbound_precall_processing',
-    when: 'SIP inbound. Runs when a customer calls in, before the bot speaks. Calls the client’s API (e.g. with the caller’s number or SIP headers) and enriches lead attributes for the call; this takes the place of lead ingestion.',
+    when: 'Inbound. Runs when a customer calls in, before the bot speaks. Calls the client’s API (e.g. with the caller’s number or SIP headers) and enriches lead attributes for the call; this takes the place of lead ingestion.',
   },
   during_call: {
     label: 'During call processors', section: 'voicebot', multi: true,

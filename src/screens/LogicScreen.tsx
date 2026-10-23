@@ -3,6 +3,7 @@
 // The layout is by hand; option labels come from the questions themselves. When the questions change, update this
 // diagram and docs/question-logic.md together.
 import { steps } from '../intake/questions';
+import { QUEUE_DEDUPE_KEY } from '../types';
 
 type Kind = 'question' | 'pick' | 'route' | 'end';
 type Section = 'Basics' | 'Voice bot' | 'Speech analytics' | 'Post call';
@@ -25,29 +26,30 @@ const NODES = {
   name:          { col: 2, row: 0,  kind: 'question', section: 'Basics', title: 'Which project is this?', sub: 'Required' },
   products:      { col: 2, row: 1,  kind: 'question', section: 'Basics', title: 'What’s live on this project?', options: optionsOf('products'), w: 290 },
 
-  direction:     { col: 1, row: 2,  kind: 'question', section: 'Voice bot', title: 'Which way do the calls go?', options: optionsOf('direction') },
-  lead:          { col: 0, row: 3,  kind: 'pick',     section: 'Voice bot', title: 'How do leads reach us?', options: optionsOf('lead') },
-  routeApi:      { col: 0, row: 4,  kind: 'route',    title: 'API picked?' },
-  connectors:    { col: 1, row: 4,  kind: 'question', section: 'Voice bot', title: 'Which connectors send them?', sub: 'Any number of names' },
-  preCall:       { col: 0, row: 5,  kind: 'question', section: 'Voice bot', title: 'Pre call processor?', options: YES_NO },
-  dialer:        { col: 0, row: 6,  kind: 'question', section: 'Voice bot', title: 'Whose dialer dials the calls?', options: ['Client’s', 'Ours', 'Not sure'] },
-  providerOut:   { col: 0, row: 7,  kind: 'question', section: 'Voice bot', title: 'Dialer / telephony provider?', sub: optionsOf('provider').join(' · ') },
-  providerIn:    { col: 2, row: 7,  kind: 'question', section: 'Voice bot', title: 'Dialer / telephony provider?', sub: optionsOf('provider').join(' · ') },
-  noAnswer:      { col: 0, row: 8,  kind: 'question', section: 'Voice bot', title: 'No answer call processor?', options: YES_NO },
-  connected:     { col: 0, row: 9,  kind: 'question', section: 'Voice bot', title: 'Pre call connected processor?', options: YES_NO },
-  routeDir:      { col: 0, row: 10, kind: 'route',    title: 'Direction?' },
+  connection:    { col: 1, row: 2,  kind: 'question', section: 'Voice bot', title: 'How does the call reach the bot?', options: optionsOf('connection') },
+  direction:     { col: 1, row: 3,  kind: 'question', section: 'Voice bot', title: 'Which way do the calls go? (never both)', options: optionsOf('direction') },
+  lead:          { col: 0, row: 4,  kind: 'pick',     section: 'Voice bot', title: 'How do leads reach us?', options: optionsOf('lead') },
+  routeApi:      { col: 0, row: 5,  kind: 'route',    title: 'API picked?' },
+  connectors:    { col: 1, row: 5,  kind: 'question', section: 'Voice bot', title: 'Which connectors send them?', sub: 'Any number of names' },
+  preCall:       { col: 0, row: 6,  kind: 'question', section: 'Voice bot', title: 'Pre call processor?', options: YES_NO },
+  dialer:        { col: 0, row: 7,  kind: 'question', section: 'Voice bot', title: 'Whose dialer dials the calls?', options: ['Client’s', 'Ours', 'Not sure'] },
+  providerOut:   { col: 0, row: 8,  kind: 'question', section: 'Voice bot', title: 'Dialer / telephony provider?', sub: optionsOf('provider').join(' · ') },
+  providerIn:    { col: 2, row: 8,  kind: 'question', section: 'Voice bot', title: 'Dialer / telephony provider?', sub: optionsOf('provider').join(' · ') },
+  noAnswer:      { col: 0, row: 9,  kind: 'question', section: 'Voice bot', title: 'No answer call processor?', options: YES_NO },
+  connected:     { col: 0, row: 10, kind: 'question', section: 'Voice bot', title: 'Pre call connected processor?', options: YES_NO },
   inboundPre:    { col: 2, row: 10, kind: 'question', section: 'Voice bot', title: 'Inbound pre call processor?', options: YES_NO },
   during:        { col: 1, row: 11, kind: 'question', section: 'Voice bot', title: 'Anything during the call?', sub: 'Yes: list each processor · No' },
   transfer:      { col: 1, row: 12, kind: 'question', section: 'Voice bot', title: 'Is the call ever transferred?', sub: 'Yes: what it transfers to · No' },
   routeProducts: { col: 1, row: 13, kind: 'route',    title: 'Speech analytics too?' },
 
   recFormat:     { col: 3, row: 2,  kind: 'question', section: 'Speech analytics', title: 'What arrives for each call?', options: optionsOf('recording_format'), w: 330 },
-  recVia:        { col: 3, row: 3,  kind: 'question', section: 'Speech analytics', title: 'What picks the recordings up?', options: optionsOf('recording_via') },
-  callbackUrl:   { col: 3, row: 4,  kind: 'question', section: 'Speech analytics', title: 'callback_url in the API request?', options: YES_NO },
-  subcategory:   { col: 3, row: 5,  kind: 'question', section: 'Speech analytics', title: 'enable_subcategory_callback = true?', options: YES_NO },
-  scheduler:     { col: 4, row: 4,  kind: 'question', section: 'Speech analytics', title: 'Scheduler: from SFTP or S3?', sub: 'Plus which calls to analyse' },
+  dedupe:        { col: 3, row: 3,  kind: 'question', section: 'Speech analytics', title: 'What’s the dedupe key?', sub: `e.g. call_id · via voice bot: ${QUEUE_DEDUPE_KEY}`, w: 300 },
+  recVia:        { col: 3, row: 4,  kind: 'question', section: 'Speech analytics', title: 'What picks the recordings up?', options: optionsOf('recording_via') },
+  callbackUrl:   { col: 3, row: 5,  kind: 'question', section: 'Speech analytics', title: 'callback_url in the API request?', options: YES_NO },
+  subcategory:   { col: 3, row: 6,  kind: 'question', section: 'Speech analytics', title: 'enable_subcategory_callback = true?', options: YES_NO },
+  scheduler:     { col: 4, row: 5,  kind: 'question', section: 'Speech analytics', title: 'Scheduler: from SFTP or S3?', sub: 'Plus which calls to analyse' },
   resourcePre:   { col: 3, row: 13, kind: 'question', section: 'Speech analytics', title: 'Resource listen pre processor (pre-analytics processor)?', options: YES_NO },
-  checklists:    { col: 3, row: 14, kind: 'question', section: 'Speech analytics', title: 'Any checklists mapped?', options: YES_NO },
+  checklists:    { col: 3, row: 14, kind: 'question', section: 'Speech analytics', title: 'Which checklists are mapped?', sub: 'At least one: analysis needs a checklist' },
   parameters:    { col: 3, row: 15, kind: 'question', section: 'Speech analytics', title: 'Parameters, one question per checklist', sub: 'Each parameter: pre / post processor' },
 
   resourcePost:  { col: 2, row: 16, kind: 'question', section: 'Post call', title: 'Resource post processor?', options: YES_NO },
@@ -77,11 +79,12 @@ type Edge = { from: Id; to: Id; route: Route; label?: string };
 
 const EDGES: Edge[] = [
   { from: 'name', to: 'products', route: 'down' },
-  { from: 'products', to: 'direction', route: 'sideDown', label: 'Voice bot · Both' },
+  { from: 'products', to: 'connection', route: 'sideDown', label: 'Voice bot · Both' },
   { from: 'products', to: 'recFormat', route: 'sideDown', label: 'Speech analytics' },
 
-  { from: 'direction', to: 'lead', route: 'sideDown', label: 'Outbound · Both' },
-  { from: 'direction', to: 'providerIn', route: 'sideDown', label: 'SIP inbound' },
+  { from: 'connection', to: 'direction', route: 'down' },
+  { from: 'direction', to: 'lead', route: 'sideDown', label: 'Outbound' },
+  { from: 'direction', to: 'providerIn', route: 'sideDown', label: 'Inbound' },
   { from: 'lead', to: 'routeApi', route: 'down' },
   { from: 'routeApi', to: 'connectors', route: 'across', label: 'Yes' },
   { from: 'routeApi', to: 'preCall', route: 'down', label: 'No' },
@@ -90,17 +93,16 @@ const EDGES: Edge[] = [
   { from: 'dialer', to: 'providerOut', route: 'down' },
   { from: 'providerOut', to: 'noAnswer', route: 'down' },
   { from: 'noAnswer', to: 'connected', route: 'down' },
-  { from: 'connected', to: 'routeDir', route: 'down' },
-  { from: 'routeDir', to: 'inboundPre', route: 'across', label: 'Both' },
+  { from: 'connected', to: 'during', route: 'downSide' },
   { from: 'providerIn', to: 'inboundPre', route: 'down' },
-  { from: 'routeDir', to: 'during', route: 'downSide', label: 'Outbound' },
   { from: 'inboundPre', to: 'during', route: 'downSide' },
   { from: 'during', to: 'transfer', route: 'down' },
   { from: 'transfer', to: 'routeProducts', route: 'down' },
-  { from: 'routeProducts', to: 'resourcePre', route: 'across', label: 'Yes: recordings arrive via the internal queue' },
+  { from: 'routeProducts', to: 'resourcePre', route: 'across', label: `Yes: internal queue · dedupe key = ${QUEUE_DEDUPE_KEY}` },
   { from: 'routeProducts', to: 'resourcePost', route: 'downSide', label: 'No' },
 
-  { from: 'recFormat', to: 'recVia', route: 'down' },
+  { from: 'recFormat', to: 'dedupe', route: 'down' },
+  { from: 'dedupe', to: 'recVia', route: 'down' },
   { from: 'recVia', to: 'callbackUrl', route: 'down', label: 'Speech analytics API' },
   { from: 'callbackUrl', to: 'subcategory', route: 'down', label: 'Yes' },
   { from: 'callbackUrl', to: 'resourcePre', route: 'bypass', label: 'No' },
@@ -108,8 +110,7 @@ const EDGES: Edge[] = [
   { from: 'recVia', to: 'scheduler', route: 'sideDown', label: 'Scheduler' },
   { from: 'scheduler', to: 'resourcePre', route: 'downSide' },
   { from: 'resourcePre', to: 'checklists', route: 'down' },
-  { from: 'checklists', to: 'parameters', route: 'down', label: 'Yes' },
-  { from: 'checklists', to: 'resourcePost', route: 'sideDown', label: 'No' },
+  { from: 'checklists', to: 'parameters', route: 'down' },
   { from: 'parameters', to: 'resourcePost', route: 'downSide' },
 
   { from: 'resourcePost', to: 'review', route: 'down' },

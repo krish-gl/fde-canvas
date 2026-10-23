@@ -4,7 +4,7 @@ import { useEffect, useRef, useState } from 'react';
 import { recordingsAutomatic, type Processor, type Project } from '../types';
 import { slotProcessors, type NodeId } from './questions';
 
-// `path`: voice bot nodes that only exist on the outbound path or the SIP inbound path.
+// `path`: voice bot nodes that only exist on the outbound path or the inbound path.
 type Box = { x: number; y: number; w: number; h: number; label: string; section: 'voice' | 'analytics' | 'post'; path?: 'out' | 'in' };
 
 const H = 60;
@@ -14,7 +14,7 @@ const NODES: Record<NodeId, Box> = {
   dialer:             { x: 280, y: 0,   w: 280, h: H, label: 'Dialer: dials the calls', section: 'voice', path: 'out' },
   no_answer:          { x: 270, y: 150, w: 140, h: H, label: 'No answer processor', section: 'voice', path: 'out' },
   pre_call_connected: { x: 425, y: 150, w: 150, h: H, label: 'Pre call connected', section: 'voice', path: 'out' },
-  caller:             { x: 0,   y: 300, w: 200, h: H, label: 'Customer calls in (SIP)', section: 'voice', path: 'in' },
+  caller:             { x: 0,   y: 300, w: 200, h: H, label: 'Customer calls in', section: 'voice', path: 'in' },
   inbound_pre_call:   { x: 280, y: 300, w: 280, h: H, label: 'Inbound pre call processor', section: 'voice', path: 'in' },
   during_call:        { x: 660, y: 40,  w: 210, h: H, label: 'During call processors', section: 'voice' },
   transfer:           { x: 900, y: 150, w: 200, h: H, label: 'Transfer call processor', section: 'voice' },
@@ -33,7 +33,7 @@ const FRAMES = [
 ];
 const LABELS = [
   { x: 0, y: -60, text: 'Voice bot' },
-  { x: 0, y: 260, text: 'SIP inbound' },
+  { x: 0, y: 260, text: 'Inbound' },
   { x: 0, y: 540, text: 'Speech analytics' },
   { x: 920, y: 540, text: 'Post call' },
 ];
@@ -75,11 +75,11 @@ const ofProcessors = (list: Processor[]): State | null => {
 function stateOf(id: NodeId, a: Project, saidNo: Set<string>): State {
   switch (id) {
     case 'lead': return a.leadIngestion.methods.length ? a.leadIngestion.status : 'unset';
-    case 'caller': return a.dialer.direction === 'inbound' || a.dialer.direction === 'both' ? a.dialer.status : 'unset';
+    case 'caller': return a.dialer.direction === 'inbound' ? a.dialer.status : 'unset';
     case 'dialer': return a.dialer.clientDialer !== null || a.dialer.direction ? a.dialer.status : 'unset';
     // With both products, recordings come from the voice bot's calls through the internal queue: nothing to track.
     case 'recordings': case 'cdr': return recordingsAutomatic(a) ? 'unset' : a.recordings.format || a.recordings.via ? a.recordings.status : 'unset';
-    case 'checklists': return a.checklists.length ? ofProcessors(a.processors.filter(p => p.checklistId)) ?? 'open' : saidNo.has('checklists') ? 'disabled' : 'unset';
+    case 'checklists': return a.checklists.length ? ofProcessors(a.processors.filter(p => p.checklistId)) ?? 'open' : 'unset';
     case 'audit_pre': case 'audit_post': return ofProcessors(slotProcessors(a, id)) ?? 'unset';
     default: {
       const list = slotProcessors(a, id);
@@ -129,7 +129,7 @@ export default function Backdrop({ project, focus, saidNo }: { project: Project;
         {LINES.map(([a, b, path], i) => <line key={i} x1={a[0]} y1={a[1]} x2={b[0]} y2={b[1]} markerEnd="url(#bd-arrow)" className={inactive(path ? 'voice' : 'post', path) ? 'inactive' : ''} />)}
       </svg>
       {FRAMES.map(f => <div key={f.label} className={`backdrop-frame ${inactive('voice') ? 'inactive' : ''}`} style={{ left: f.x, top: f.y, width: f.w, height: f.h }}><span>{f.label}</span></div>)}
-      {LABELS.map(l => <div key={l.text} className={`backdrop-label ${l.text === 'SIP inbound' && inactive('voice', 'in') ? 'inactive' : ''}`} style={{ left: l.x, top: l.y }}>{l.text}</div>)}
+      {LABELS.map(l => <div key={l.text} className={`backdrop-label ${l.text === 'Inbound' && inactive('voice', 'in') ? 'inactive' : ''}`} style={{ left: l.x, top: l.y }}>{l.text}</div>)}
       {DECISIONS.map(d => <div key={d.text} className="backdrop-decision" style={{ left: d.x, top: d.y }}>{d.text}</div>)}
       {(Object.keys(NODES) as NodeId[]).map(id => {
         const n = NODES[id];

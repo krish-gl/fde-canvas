@@ -1,12 +1,12 @@
 // All state lives in one CanvasFile. Every edit autosaves to this browser; the JSON file you export is the
 // copy you keep and share. "dirty" means there are edits the last exported file doesn't have.
 import { createContext, type ReactNode, useCallback, useContext, useEffect, useMemo, useState } from 'react';
-import type { Project, CanvasFile, Checklist, ChecklistParameter, Direction, LeadMethod, Processor, Product, RecordingFormat, RecordingVia, SchedulerSource, SlotKey, Status } from './types';
+import type { Project, CanvasFile, Checklist, ChecklistParameter, Connection, Direction, LeadMethod, Processor, Product, RecordingFormat, RecordingVia, SchedulerSource, SlotKey, Status } from './types';
 import { SLOTS } from './types';
 // The example projects name real clients, so sample.ts is gitignored: a fresh clone (and the deployed site)
 // starts empty, and only machines that have the file show the examples on first run.
 const sampleModules = import.meta.glob<{ sampleFile: CanvasFile }>('./sample.ts', { eager: true });
-const emptyFile: CanvasFile = { version: 7, projects: [] };
+const emptyFile: CanvasFile = { version: 8, projects: [] };
 const sampleFile = Object.values(sampleModules)[0]?.sampleFile ?? emptyFile;
 
 const DATA_KEY = 'fde-canvas:data';
@@ -18,9 +18,9 @@ export const newId = () => Math.random().toString(36).slice(2, 10);
 export const newProject = (name: string, products: Product[]): Project => ({
   id: newId(), name, products, notes: '',
   leadIngestion: { methods: [], connectors: [], notes: '', status: 'open' },
-  dialer: { clientDialer: null, provider: '', direction: null, notes: '', status: 'open' },
+  dialer: { clientDialer: null, provider: '', connection: null, direction: null, notes: '', status: 'open' },
   transferTo: '',
-  recordings: { format: null, via: null, schedulerSource: null, schedulerConfig: '', callbackUrl: null, subcategoryCallback: null, notes: '', status: 'open' },
+  recordings: { format: null, via: null, dedupeKey: '', schedulerSource: null, schedulerConfig: '', callbackUrl: null, subcategoryCallback: null, notes: '', status: 'open' },
   checklists: [], processors: [],
 });
 export const newProcessor = (slot: SlotKey): Processor => ({
@@ -42,7 +42,8 @@ export const parameterProcessor = (project: Project, slot: 'audit_pre' | 'audit_
 const SLOT_KEYS = Object.keys(SLOTS) as SlotKey[];
 const PRODUCT_KEYS: Product[] = ['voicebot', 'speech_analytics'];
 const LEAD_METHOD_KEYS: LeadMethod[] = ['api', 'sftp', 'manual', 's3'];
-const DIRECTIONS: Direction[] = ['inbound', 'outbound', 'both'];
+const DIRECTIONS: Direction[] = ['inbound', 'outbound'];
+const CONNECTIONS: Connection[] = ['sip', 'pstn', 'wsb'];
 // Anything without a status yet (older files) starts open.
 const status = (value: unknown): Status => (value === 'closed' ? 'closed' : 'open');
 // Version 1 files placed processors in lifecycle stages; each maps to the point that stage now covers.
@@ -68,6 +69,7 @@ function readRecordings(a: Record<string, unknown>): Project['recordings'] {
     return {
       format: FORMATS.includes(r.format as RecordingFormat) ? (r.format as RecordingFormat) : null,
       via,
+      dedupeKey: str(r.dedupeKey),
       schedulerSource: via === 'scheduler' && SCHEDULER_SOURCES.includes(r.schedulerSource as SchedulerSource) ? (r.schedulerSource as SchedulerSource) : null,
       schedulerConfig: via === 'scheduler' ? str(r.schedulerConfig) : '',
       callbackUrl: via === 'api' ? bool(r.callbackUrl) : null,
@@ -81,6 +83,7 @@ function readRecordings(a: Record<string, unknown>): Project['recordings'] {
   return {
     format: null,
     via,
+    dedupeKey: '',
     schedulerSource: via === 'scheduler' ? (/sftp/i.test(legacy) ? 'sftp' : 's3') : null,
     schedulerConfig: '',
     callbackUrl: null,
@@ -154,8 +157,13 @@ export function parseCanvasFile(text: string): CanvasFile {
       else processors.push(newProcessor('transfer'));
     }
     const lead = obj(a.leadIngestion);
+    // Before version 8 a project could be inbound and outbound at once; that's no longer possible, so it comes in unset
+    // (its processors stay, and the canvas shows the path that doesn't match with a warning).
     const direction = DIRECTIONS.includes(dialer.direction as Direction) ? (dialer.direction as Direction)
       : DIRECTIONS.includes(telephony.direction as Direction) ? (telephony.direction as Direction) : null;
+    // Inbound used to mean SIP inbound.
+    const connection = CONNECTIONS.includes(dialer.connection as Connection) ? (dialer.connection as Connection)
+      : direction === 'inbound' && a.dialer !== undefined && dialer.connection === undefined ? 'sip' : null;
 
     return {
       id: str(a.id) || newId(),
@@ -170,6 +178,7 @@ export function parseCanvasFile(text: string): CanvasFile {
       dialer: {
         clientDialer,
         provider: str(dialer.provider) || str(telephony.provider),
+        connection,
         direction,
         notes: str(dialer.notes) || legacyNotes,
         status: status(dialer.status),
@@ -183,7 +192,7 @@ export function parseCanvasFile(text: string): CanvasFile {
         : processors,
     };
   });
-  return { version: 7, exportedAt: str(file.exportedAt) || undefined, projects };
+  return { version: 8, exportedAt: str(file.exportedAt) || undefined, projects };
 }
 
 function loadSaved(): CanvasFile {
@@ -241,7 +250,7 @@ export function StoreProvider({ children }: { children: ReactNode }) {
       setDirty(false);
     },
     exportFile: () => {
-      const exported: CanvasFile = { ...file, version: 7, exportedAt: new Date().toISOString() };
+      const exported: CanvasFile = { ...file, version: 8, exportedAt: new Date().toISOString() };
       const blob = new Blob([JSON.stringify(exported, null, 2)], { type: 'application/json' });
       const link = document.createElement('a');
       link.href = URL.createObjectURL(blob);

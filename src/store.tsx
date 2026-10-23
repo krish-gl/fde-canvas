@@ -41,7 +41,7 @@ export const parameterProcessor = (project: Project, slot: 'audit_pre' | 'audit_
 
 const SLOT_KEYS = Object.keys(SLOTS) as SlotKey[];
 const PRODUCT_KEYS: Product[] = ['voicebot', 'speech_analytics'];
-const LEAD_METHOD_KEYS: LeadMethod[] = ['api', 'sftp', 'manual', 's3'];
+const LEAD_METHOD_KEYS: LeadMethod[] = ['api', 'sftp', 'manual'];
 const DIRECTIONS: Direction[] = ['inbound', 'outbound'];
 const CONNECTIONS: Connection[] = ['sip', 'pstn', 'wsb'];
 // Anything without a status yet (older files) starts open.
@@ -173,7 +173,9 @@ export function parseCanvasFile(text: string): CanvasFile {
       leadIngestion: {
         methods: arr(lead.methods).filter((m): m is LeadMethod => LEAD_METHOD_KEYS.includes(m as LeadMethod)),
         connectors: arr(lead.connectors).map(str).map(c => c.trim()).filter(Boolean),
-        notes: str(lead.notes), status: status(lead.status),
+        // S3 push used to be a lead method; voice bot leads never arrive that way, so it's dropped, with a note so it isn't lost silently.
+        notes: arr(lead.methods).includes('s3') ? [str(lead.notes), 'Was marked as arriving by S3 push.'].filter(Boolean).join('\n') : str(lead.notes),
+        status: status(lead.status),
       },
       dialer: {
         clientDialer,

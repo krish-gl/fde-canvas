@@ -31,7 +31,7 @@ Conditions used below:
 |---|---|---|---|---|
 | 2a | How does the call reach the bot? | Voice bot | One of: SIP / PSTN / WSB | `dialer.connection` |
 | 3 | Which way do the calls go? | Voice bot | One of: Outbound / Inbound | `dialer.direction` |
-| 4 | How do leads reach us? | Outbound path | Pick any of: API / SFTP / Manual / S3 push, plus optional note | `leadIngestion.methods`, `leadIngestion.notes` |
+| 4 | How do leads reach us? | Outbound path | Pick any of: API / SFTP / Manual, plus optional note | `leadIngestion.methods`, `leadIngestion.notes` |
 | 4a | ↳ Which connectors send them? | API is picked in 4 | List of names, any number | `leadIngestion.connectors` |
 | 5 | Is there a pre call processor? | Outbound path | Processor yes/no | `pre_call` processor |
 | 6 | Whose dialer dials the calls? | Outbound path | One of: The client’s dialer / Ours / Not sure yet, plus optional note | `dialer.clientDialer` (true / false / null), `dialer.notes` |

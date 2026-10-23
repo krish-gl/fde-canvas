@@ -112,7 +112,7 @@ export const steps: Step[] = [
     info: 'Lead ingestion: how the client’s leads arrive before they’re dialled.',
     options: LEAD_METHODS.map(m => ({
       value: m.key, label: m.label,
-      info: { api: 'The client calls our API to push leads.', sftp: 'Files dropped on an SFTP server on a schedule.', manual: 'Someone uploads a file by hand.', s3: 'Files pushed to an S3 bucket we read.' }[m.key],
+      info: { api: 'The client calls our API to push leads.', sftp: 'Files dropped on an SFTP server on a schedule.', manual: 'Someone uploads a file by hand.' }[m.key],
     })),
     get: a => a.leadIngestion.methods,
     set: (a, values) => ({ ...a, leadIngestion: { ...a.leadIngestion, methods: values as LeadMethod[] } }),

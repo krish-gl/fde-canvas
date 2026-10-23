@@ -5,7 +5,7 @@
 // along the way (how leads arrive, whose dialer it is and which way it dials, which checklists are mapped).
 
 export type Product = 'voicebot' | 'speech_analytics';
-export type LeadMethod = 'api' | 'sftp' | 'manual' | 's3';
+export type LeadMethod = 'api' | 'sftp' | 'manual';
 // A voice bot project dials out or takes calls in, never both.
 export type Direction = 'inbound' | 'outbound';
 // How the call reaches the bot. Separate from direction: either path can use any of these.
@@ -86,7 +86,6 @@ export const LEAD_METHODS: Array<{ key: LeadMethod; label: string }> = [
   { key: 'api', label: 'API' },
   { key: 'sftp', label: 'SFTP' },
   { key: 'manual', label: 'Manual' },
-  { key: 's3', label: 'S3 push' },
 ];
 
 export const RECORDING_FORMAT_LABEL: Record<RecordingFormat, string> = {

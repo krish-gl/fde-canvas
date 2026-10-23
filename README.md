@@ -48,7 +48,7 @@ A fresh copy starts with no projects. The example projects name real clients, so
   - **Review:** a review screen at the end lets you click any answer to change it.
 - **Project canvas:** the call architecture with this project's processors in place.
   - **Voice bot:** first how the call reaches the bot (SIP, PSTN or WSB), which applies to either path. Then the direction, outbound or inbound, which decides how the call starts.
-    - **Outbound:** lead ingestion (API, SFTP, manual, S3 push; with API you also list the connectors, as many as there are) → *pre call processor* → dialer (the client's or ours, and the provider). The dialer branches two ways:
+    - **Outbound:** lead ingestion (API, SFTP, manual; with API you also list the connectors, as many as there are) → *pre call processor* → dialer (the client's or ours, and the provider). The dialer branches two ways:
       - doesn't pick up → *no answer call processor*
       - picks up → *pre call connected processor*
     - **Inbound:** there's no lead ingestion. The customer calls in → *inbound pre call processor* (`inbound_precall_processing`), which calls the client's API and enriches the lead attributes used during the call. For inbound, this is the lead ingestion.
@@ -79,7 +79,7 @@ Never put API keys, tokens or passwords in a processor's description: the file i
       "products": ["voicebot", "speech_analytics"],   // either or both
       "notes": "",
       "leadIngestion": { "methods": ["api"], "connectors": ["LSQ"], "notes": "", "status": "open" },
-                                                                         // methods: api | sftp | manual | s3
+                                                                         // methods: api | sftp | manual
                                                                          // connectors: only used when methods has api
       "dialer": { "clientDialer": true, "provider": "Ozonetel", "connection": "sip", "direction": "inbound", "notes": "", "status": "closed" },
                                                                          // clientDialer: true | false | null
@@ -137,6 +137,7 @@ You can edit the file by hand. On import:
   - On an inbound project, a *pre call connected* processor from before version 6 becomes the *inbound pre call processor*.
   - Before version 7, recordings were one free-text `recordingSource`. It becomes the recordings notes; "Our Speech Analytics API" becomes picked up by the API, and an SFTP or S3 source becomes a scheduler on that source. `recordingStatus` becomes the recordings status.
   - Before version 8 a project could be inbound and outbound at once. Now it's one or the other, so such a project comes in with no direction set (its processors stay; pick the direction again). An inbound project from before version 8 gets SIP as its connection, since inbound used to mean SIP inbound.
+  - S3 push is no longer a lead method. A project that had it drops it, and its lead ingestion notes say "Was marked as arriving by S3 push."
   - Flows, file locations, links and update logs are dropped.
 - A file with no `projects` list, or a project with no name, is rejected with a message, and nothing in the browser changes.
 

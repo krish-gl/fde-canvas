@@ -1,0 +1,7 @@
+node_modules
+dist
+*.local
+*.tsbuildinfo
+# Example projects name real clients: keep them out of the public repo.
+src/sample.ts
+examples/

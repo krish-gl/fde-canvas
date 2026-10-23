@@ -1,7 +1,7 @@
 // The whole architecture drawn behind the questions. The camera pans to the component the current question
 // is about and lights it up; components fill in green or red as they're answered.
 import { useEffect, useRef, useState } from 'react';
-import type { Processor, Project } from '../types';
+import { recordingsAutomatic, type Processor, type Project } from '../types';
 import { slotProcessors, type NodeId } from './questions';
 
 // `path`: voice bot nodes that only exist on the outbound path or the SIP inbound path.
@@ -77,7 +77,8 @@ function stateOf(id: NodeId, a: Project, saidNo: Set<string>): State {
     case 'lead': return a.leadIngestion.methods.length ? a.leadIngestion.status : 'unset';
     case 'caller': return a.dialer.direction === 'inbound' || a.dialer.direction === 'both' ? a.dialer.status : 'unset';
     case 'dialer': return a.dialer.clientDialer !== null || a.dialer.direction ? a.dialer.status : 'unset';
-    case 'recordings': case 'cdr': return a.recordingSource ? a.recordingStatus : 'unset';
+    // With both products, recordings come from the voice bot's calls through the internal queue: nothing to track.
+    case 'recordings': case 'cdr': return recordingsAutomatic(a) ? 'unset' : a.recordingSource ? a.recordingStatus : 'unset';
     case 'checklists': return a.checklists.length ? ofProcessors(a.processors.filter(p => p.checklistId)) ?? 'open' : saidNo.has('checklists') ? 'disabled' : 'unset';
     case 'audit_pre': case 'audit_post': return ofProcessors(slotProcessors(a, id)) ?? 'unset';
     default: {

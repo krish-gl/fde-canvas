@@ -40,6 +40,7 @@ A fresh copy starts with no projects. The example projects name real clients, so
 ## Screens
 
 - **Projects:** every project, with its products, call direction, dialer, lead ingestion methods, transfer, and how many processors are on and off. Search matches processor names and descriptions, lead connectors, checklists and parameters. **New project** starts the questions.
+- **How it works:** every question, when it's asked, what it writes and the rules the flow follows. It shows [docs/question-logic.md](docs/question-logic.md), so updating that file updates the page.
 - **New project (questions):** one question at a time, grouped into Basics, Voice bot, Speech analytics and Post call.
   - **The diagram:** the whole architecture is drawn behind the questions. It pans to the component each question is about and lights it up, then fills in as you answer: red for open, green for closed, grey for said no.
   - **Answering:** every question is multiple choice. A processor question is yes/no, with "What does it do?" when the answer is yes. Number keys pick options and Enter continues.
@@ -54,7 +55,7 @@ A fresh copy starts with no projects. The example projects name real clients, so
     - **Both:** both paths, one above the other.
     - Every path joins at During call → *during call processors* (any number); Transfer? → *transfer call processor*.
     - A path that doesn't match the direction is hidden, unless it still holds processors; then it shows with a warning.
-  - **Speech analytics:** recordings → CDR / recording extraction → *resource listen pre processor (pre-analytics processor)*. Then checklist processing: each checklist lists its parameters, and each parameter has a *pre* and a *post processor* switch.
+  - **Speech analytics:** recordings (with both products, these are the voice bot's calls, arriving through the internal queue, so there's nothing to set up) → CDR / recording extraction → *resource listen pre processor (pre-analytics processor)*. Then checklist processing: each checklist lists its parameters, and each parameter has a *pre* and a *post processor* switch.
   - **Post call:** the *resource post processor*. This shows whether or not speech analytics is live.
   - **Enabled vs status:** these are two separate settings.
     - **Enabled / disabled** (the switch) says whether a point applies to this project. Disabled processors and unused points are **grey**.
@@ -129,12 +130,14 @@ You can edit the file by hand. On import:
 
 ## Code map
 
+Every question, when it's asked and what it writes is laid out in [docs/question-logic.md](docs/question-logic.md). Keep it up to date when the questions change.
+
 ```
 src/
   types.ts          data shape and labels
   store.tsx         state, autosave, import validation, export
   sample.ts         the first-run example projects (gitignored: they name real clients)
-  router.ts         hash routes (#/, #/new, #/p/<id>, #/p/<id>/edit)
+  router.ts         hash routes (#/, #/new, #/how, #/p/<id>, #/p/<id>/edit)
   intake/
     questions.ts    the questions, which diagram component each is about, and how answers write to the project
     IntakeFlow.tsx  the one-question-at-a-time flow and review screen
@@ -142,8 +145,11 @@ src/
   App.tsx           top bar, import/export, routing
   screens/
     ProjectsScreen.tsx
+    LogicScreen.tsx     the How it works page (renders docs/question-logic.md)
     ProjectCanvas.tsx   the architecture diagram
     panels.tsx      processor, lead ingestion, dialer, recordings, checklist (and parameters) and project editors
   components/       modal, form fields and the ⓘ tooltip
   styles.css
+docs/
+  question-logic.md the question logic, shown in the app as How it works
 ```

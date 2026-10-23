@@ -1,8 +1,9 @@
 // The new-project questions, one at a time, grouped by section of the diagram. Each question names the
 // diagram component it's about (`focus`), which the backdrop pans to and lights up while it's asked.
 // Questions read and write the draft project directly, so the same flow also edits an existing project.
+// docs/question-logic.md lays out every question and rule in plain English: update it when they change.
 import { newChecklist, newParameter, newProcessor, parameterProcessor } from '../store';
-import { LEAD_METHODS, SLOTS, type Project, type Direction, type LeadMethod, type Processor, type Product, type SlotKey } from '../types';
+import { LEAD_METHODS, SLOTS, recordingsAutomatic, type Project, type Direction, type LeadMethod, type Processor, type Product, type SlotKey } from '../types';
 
 export type NodeId =
   | 'lead' | 'pre_call' | 'dialer' | 'no_answer' | 'pre_call_connected' | 'caller' | 'inbound_pre_call' | 'during_call' | 'transfer'
@@ -45,6 +46,8 @@ const hasVoice = (a: Project) => a.products.includes('voicebot');
 const outbound = (a: Project) => hasVoice(a) && a.dialer.direction !== 'inbound';
 const inbound = (a: Project) => hasVoice(a) && (a.dialer.direction === 'inbound' || a.dialer.direction === 'both');
 const hasAnalytics = (a: Project) => a.products.includes('speech_analytics');
+// With the voice bot as well, recordings arrive from its calls through the internal queue: nothing to ask.
+const recordingsAsked = (a: Project) => hasAnalytics(a) && !recordingsAutomatic(a);
 
 const PRODUCT_CHOICE: Record<string, Product[]> = { voicebot: ['voicebot'], speech_analytics: ['speech_analytics'], both: ['voicebot', 'speech_analytics'] };
 const productValue = (a: Project) =>
@@ -65,7 +68,7 @@ export const steps: Step[] = [
     options: [
       { value: 'voicebot', label: 'Voice bot', hint: 'Live calls handled by the bot', info: 'Brings in lead ingestion, the dialer, and the pre call, during call and transfer processors.' },
       { value: 'speech_analytics', label: 'Speech analytics', hint: 'Recorded calls analysed after the fact', info: 'Brings in recordings, the resource listen pre processor, checklists and audit parameter processors.' },
-      { value: 'both', label: 'Both', info: 'Every section applies.' },
+      { value: 'both', label: 'Both', info: 'Every section applies. Speech analytics gets the voice bot’s calls through the internal queue, so there’s no separate recording source.' },
     ],
     get: productValue,
     set: (a, v) => ({ ...a, products: PRODUCT_CHOICE[v] ?? [] }),
@@ -152,7 +155,7 @@ export const steps: Step[] = [
 
   // Speech analytics
   {
-    id: 'recordings', section: 'Speech analytics', kind: 'choice', focus: ['recordings', 'cdr'], when: hasAnalytics,
+    id: 'recordings', section: 'Speech analytics', kind: 'choice', focus: ['recordings', 'cdr'], when: recordingsAsked,
     title: 'Where do the recordings come from?', info: 'Where we pick up the CDR: the call recording plus its metadata.',
     options: [...RECORDING_SOURCES.map(value => ({ value })), { value: '', label: 'Not sure yet' }],
     get: a => (a.recordingSource || undefined),

@@ -5,6 +5,7 @@ import { useRoute } from './router';
 import { ConfirmModal } from './components/Modal';
 import ProjectsScreen from './screens/ProjectsScreen';
 import ProjectCanvas from './screens/ProjectCanvas';
+import LogicScreen from './screens/LogicScreen';
 import IntakeFlow from './intake/IntakeFlow';
 
 export default function App() {
@@ -41,6 +42,10 @@ export default function App() {
     <header className="topbar">
       <div className="topbar-left">
         <a href="#/" className="wordmark">FDE Canvas</a>
+        <nav className="nav">
+          <a href="#/" className={route.screen === 'projects' || route.screen === 'project' ? 'active' : ''}>Projects</a>
+          <a href="#/how" className={route.screen === 'how' ? 'active' : ''}>How it works</a>
+        </nav>
       </div>
       <div className="topbar-right">
         {dirty && <span className="dirty" title="Edits are saved in this browser. Export to keep them in your JSON file.">Unexported changes</span>}
@@ -53,6 +58,7 @@ export default function App() {
     {message && <div className={`flash ${message.error ? 'error' : ''}`} role="status">{message.text}</div>}
 
     {route.screen === 'projects' && <ProjectsScreen />}
+    {route.screen === 'how' && <LogicScreen />}
     {route.screen === 'project' && <ProjectCanvas key={route.projectId} projectId={route.projectId} />}
 
     {pendingImport !== null && <ConfirmModal

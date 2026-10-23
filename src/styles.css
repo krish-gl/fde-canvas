@@ -374,3 +374,19 @@ textarea.field { resize: vertical; line-height: 1.5; }
 
 .intake-subhint { margin: 0; font-size: 13px; }
 .empty.compact { padding: 24px; }
+
+/* How it works: rendered docs/question-logic.md */
+.doc { font-size: 14px; line-height: 1.6; max-width: 860px; }
+.doc h1 { font-size: 24px; font-weight: 600; letter-spacing: -.02em; margin: 4px 0 12px; }
+.doc h2 { font-size: 17px; font-weight: 600; margin: 36px 0 10px; padding-top: 18px; border-top: 1px solid var(--line); }
+.doc h3 { font-size: 14px; font-weight: 600; margin: 24px 0 8px; }
+.doc p, .doc ul { margin: 0 0 12px; }
+.doc ul { padding-left: 20px; }
+.doc li { margin: 3px 0; }
+.doc li > ul { margin: 4px 0 0; }
+.doc a { color: var(--text); text-underline-offset: 2px; }
+.doc code { font: 12px var(--mono); background: var(--surface); border: 1px solid var(--line); border-radius: 4px; padding: 1px 5px; }
+.doc table { width: 100%; border-collapse: collapse; margin: 0 0 16px; font-size: 13px; display: block; overflow-x: auto; }
+.doc th, .doc td { text-align: left; vertical-align: top; padding: 7px 10px; border-bottom: 1px solid var(--line); }
+.doc th { font: 500 10px var(--mono); letter-spacing: .08em; text-transform: uppercase; color: var(--muted); white-space: nowrap; }
+.doc strong { font-weight: 600; }

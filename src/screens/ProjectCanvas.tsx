@@ -5,7 +5,7 @@ import { ArrowDown, ArrowLeft, ArrowRight, Info, ListChecks, MessagesSquare, Plu
 import { newChecklist, newProcessor, parameterProcessor, useStore } from '../store';
 import { hrefFor, navigate } from '../router';
 import { ConfirmModal } from '../components/Modal';
-import { DIRECTION_LABEL, LEAD_METHODS, PRODUCTS, SLOTS, type Project, type Checklist, type Processor, type SlotKey, type Status } from '../types';
+import { DIRECTION_LABEL, LEAD_METHODS, PRODUCTS, SLOTS, recordingsAutomatic, type Project, type Checklist, type Processor, type SlotKey, type Status } from '../types';
 import { ProjectPanel, ChecklistPanel, DialerPanel, LeadPanel, ProcessorPanel, RecordingsPanel } from './panels';
 
 export type Selection =
@@ -167,9 +167,12 @@ export default function ProjectCanvas({ projectId }: { projectId: string }) {
           <div className="arch-section-title">Speech analytics</div>
           <div className="arch-row">
             <div className="arch-col narrow">
-              <Node status={project.recordingStatus} title="Recordings from" selected={isSelected({ kind: 'recordings' })} onClick={() => select({ kind: 'recordings' })}>
-                <span className="node-sub">{project.recordingSource || 'Dialer → lead ingestion. Not set'}</span>
-              </Node>
+              {recordingsAutomatic(project)
+                // Both products: the voice bot's calls reach speech analytics through the internal queue. Nothing to set up.
+                ? <Node title="Recordings from"><span className="node-sub">Voice bot calls, via the internal queue. No separate ingestion needed.</span></Node>
+                : <Node status={project.recordingStatus} title="Recordings from" selected={isSelected({ kind: 'recordings' })} onClick={() => select({ kind: 'recordings' })}>
+                  <span className="node-sub">{project.recordingSource || 'Dialer → lead ingestion. Not set'}</span>
+                </Node>}
             </div>
             <Arrow />
             <div className="arch-col">

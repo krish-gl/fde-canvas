@@ -54,6 +54,11 @@ export type Project = {
 
 export type CanvasFile = { version: 6; exportedAt?: string; projects: Project[] };
 
+// With both products, speech analytics gets the voice bot's own calls through an internal queue, so there's no
+// recording source to set up. Recording source and status only apply to speech analytics on its own.
+export const recordingsAutomatic = (project: Pick<Project, 'products'>) =>
+  project.products.includes('voicebot') && project.products.includes('speech_analytics');
+
 export const PRODUCTS: Array<{ key: Product; label: string }> = [
   { key: 'voicebot', label: 'Voice bot' },
   { key: 'speech_analytics', label: 'Speech analytics' },

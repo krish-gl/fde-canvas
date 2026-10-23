@@ -1,7 +1,7 @@
 // The new-project questions, one at a time, grouped by section of the diagram. Each question names the
 // diagram component it's about (`focus`), which the backdrop pans to and lights up while it's asked.
 // Questions read and write the draft project directly, so the same flow also edits an existing project.
-// docs/question-logic.md lays out every question and rule in plain English: update it when they change.
+// docs/question-logic.md and the How it works diagram (screens/LogicScreen.tsx) lay these out: update both when they change.
 import { newChecklist, newParameter, newProcessor, parameterProcessor } from '../store';
 import { LEAD_METHODS, SLOTS, recordingsAutomatic, type Project, type Direction, type LeadMethod, type Processor, type Product, type SlotKey } from '../types';
 

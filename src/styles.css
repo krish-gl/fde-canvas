@@ -375,18 +375,26 @@ textarea.field { resize: vertical; line-height: 1.5; }
 .intake-subhint { margin: 0; font-size: 13px; }
 .empty.compact { padding: 24px; }
 
-/* How it works: rendered docs/question-logic.md */
-.doc { font-size: 14px; line-height: 1.6; max-width: 860px; }
-.doc h1 { font-size: 24px; font-weight: 600; letter-spacing: -.02em; margin: 4px 0 12px; }
-.doc h2 { font-size: 17px; font-weight: 600; margin: 36px 0 10px; padding-top: 18px; border-top: 1px solid var(--line); }
-.doc h3 { font-size: 14px; font-weight: 600; margin: 24px 0 8px; }
-.doc p, .doc ul { margin: 0 0 12px; }
-.doc ul { padding-left: 20px; }
-.doc li { margin: 3px 0; }
-.doc li > ul { margin: 4px 0 0; }
-.doc a { color: var(--text); text-underline-offset: 2px; }
-.doc code { font: 12px var(--mono); background: var(--surface); border: 1px solid var(--line); border-radius: 4px; padding: 1px 5px; }
-.doc table { width: 100%; border-collapse: collapse; margin: 0 0 16px; font-size: 13px; display: block; overflow-x: auto; }
-.doc th, .doc td { text-align: left; vertical-align: top; padding: 7px 10px; border-bottom: 1px solid var(--line); }
-.doc th { font: 500 10px var(--mono); letter-spacing: .08em; text-transform: uppercase; color: var(--muted); white-space: nowrap; }
-.doc strong { font-weight: 600; }
+/* How it works: the question flow diagram */
+.logic-intro { margin: 6px 0 0; max-width: 680px; font-size: 13px; }
+.logic-legend { display: flex; flex-wrap: wrap; gap: 8px 20px; margin-bottom: 14px; font-size: 12px; color: var(--muted); }
+.logic-legend span { display: inline-flex; align-items: center; gap: 7px; }
+.logic-swatch { display: inline-block; width: 18px; height: 12px; border-radius: 4px; border: 1px solid var(--line-strong); background: var(--raised); }
+.logic-swatch.kind-pick { border-color: var(--muted); border-width: 1px 1px 1px 3px; }
+.logic-swatch.kind-route { border-style: dashed; background: transparent; border-radius: 99px; }
+.logic-scroll { overflow-x: auto; padding: 16px 0; }
+.logic-world { position: relative; margin: 0 auto; }
+.logic-lines { position: absolute; inset: 0; color: var(--faint); }
+.logic-lines polyline { fill: none; stroke: currentColor; stroke-width: 1.4; }
+.logic-label { position: absolute; font: 500 10px var(--mono); color: var(--text); background: var(--surface); padding: 1px 4px; border-radius: 4px; white-space: nowrap; }
+.logic-label.centred { transform: translateX(-50%); }
+.logic-node { position: absolute; display: flex; flex-direction: column; justify-content: center; gap: 4px; padding: 6px 12px; border: 1px solid var(--line-strong); border-radius: 10px; background: var(--raised); overflow: hidden; }
+.logic-node.kind-pick { border-left: 3px solid var(--muted); }
+.logic-node.kind-route { border-style: dashed; background: var(--surface); border-radius: 99px; align-items: center; padding: 0 12px; }
+.logic-node.kind-route .logic-title { font: 500 11px var(--mono); color: var(--muted); }
+.logic-node.kind-end { border-color: var(--text); align-items: center; }
+.logic-section { font: 500 9px var(--mono); letter-spacing: .1em; text-transform: uppercase; color: var(--faint); }
+.logic-title { font-size: 12.5px; font-weight: 600; line-height: 1.25; display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden; }
+.logic-options { display: flex; gap: 4px; flex-wrap: nowrap; overflow: hidden; flex-shrink: 0; }
+.logic-option { font: 500 10px var(--mono); padding: 1px 6px; border: 1px solid var(--line-strong); border-radius: 5px; color: var(--muted); white-space: nowrap; }
+.logic-sub { font-size: 11px; color: var(--muted); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }

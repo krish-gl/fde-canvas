@@ -1,8 +1,6 @@
 # Question logic
 
-How the new-project questions work: which questions are asked, when, what each answer writes to the project, and the rules the flow follows. **Keep this file in step with the code.** When a question or rule changes in [`src/intake/questions.ts`](../src/intake/questions.ts) or [`src/intake/IntakeFlow.tsx`](../src/intake/IntakeFlow.tsx), update this file in the same commit.
-
-This file is also the app's **How it works** page, so what's written here is what the team sees.
+How the new-project questions work: which questions are asked, when, what each answer writes to the project, and the rules the flow follows. **Keep this file in step with the code.** When a question or rule changes in [`src/intake/questions.ts`](../src/intake/questions.ts) or [`src/intake/IntakeFlow.tsx`](../src/intake/IntakeFlow.tsx), update this file and the flow diagram on the app's **How it works** page ([`src/screens/LogicScreen.tsx`](../src/screens/LogicScreen.tsx)) in the same commit.
 
 The same flow is used to create a project (**New project**) and to edit one (**Edit with questions**, which opens on the review screen).
 

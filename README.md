@@ -40,7 +40,7 @@ A fresh copy starts with no projects. The example projects name real clients, so
 ## Screens
 
 - **Projects:** every project, with its products, call direction, dialer, lead ingestion methods, transfer, and how many processors are on and off. Search matches processor names and descriptions, lead connectors, checklists and parameters. **New project** starts the questions.
-- **How it works:** every question, when it's asked, what it writes and the rules the flow follows. It shows [docs/question-logic.md](docs/question-logic.md), so updating that file updates the page.
+- **How it works:** a flow diagram of every path through the questions: where an answer branches the flow and where branches merge again. The full rules are in [docs/question-logic.md](docs/question-logic.md).
 - **New project (questions):** one question at a time, grouped into Basics, Voice bot, Speech analytics and Post call.
   - **The diagram:** the whole architecture is drawn behind the questions. It pans to the component each question is about and lights it up, then fills in as you answer: red for open, green for closed, grey for said no.
   - **Answering:** every question is multiple choice. A processor question is yes/no, with "What does it do?" when the answer is yes. Number keys pick options and Enter continues.
@@ -130,7 +130,7 @@ You can edit the file by hand. On import:
 
 ## Code map
 
-Every question, when it's asked and what it writes is laid out in [docs/question-logic.md](docs/question-logic.md). Keep it up to date when the questions change.
+Every question, when it's asked and what it writes is laid out in [docs/question-logic.md](docs/question-logic.md). Keep it and the How it works diagram up to date when the questions change.
 
 ```
 src/
@@ -145,11 +145,11 @@ src/
   App.tsx           top bar, import/export, routing
   screens/
     ProjectsScreen.tsx
-    LogicScreen.tsx     the How it works page (renders docs/question-logic.md)
+    LogicScreen.tsx     the How it works page: the question flow as a diagram
     ProjectCanvas.tsx   the architecture diagram
     panels.tsx      processor, lead ingestion, dialer, recordings, checklist (and parameters) and project editors
   components/       modal, form fields and the ⓘ tooltip
   styles.css
 docs/
-  question-logic.md the question logic, shown in the app as How it works
+  question-logic.md every question and rule, for whoever changes them
 ```

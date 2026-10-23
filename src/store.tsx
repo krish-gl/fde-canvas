@@ -1,12 +1,12 @@
 // All state lives in one CanvasFile. Every edit autosaves to this browser; the JSON file you export is the
 // copy you keep and share. "dirty" means there are edits the last exported file doesn't have.
 import { createContext, type ReactNode, useCallback, useContext, useEffect, useMemo, useState } from 'react';
-import type { Project, CanvasFile, Checklist, ChecklistParameter, Direction, LeadMethod, Processor, Product, SlotKey, Status } from './types';
+import type { Project, CanvasFile, Checklist, ChecklistParameter, Direction, LeadMethod, Processor, Product, RecordingFormat, RecordingVia, SchedulerSource, SlotKey, Status } from './types';
 import { SLOTS } from './types';
 // The example projects name real clients, so sample.ts is gitignored: a fresh clone (and the deployed site)
 // starts empty, and only machines that have the file show the examples on first run.
 const sampleModules = import.meta.glob<{ sampleFile: CanvasFile }>('./sample.ts', { eager: true });
-const emptyFile: CanvasFile = { version: 6, projects: [] };
+const emptyFile: CanvasFile = { version: 7, projects: [] };
 const sampleFile = Object.values(sampleModules)[0]?.sampleFile ?? emptyFile;
 
 const DATA_KEY = 'fde-canvas:data';
@@ -19,7 +19,8 @@ export const newProject = (name: string, products: Product[]): Project => ({
   id: newId(), name, products, notes: '',
   leadIngestion: { methods: [], connectors: [], notes: '', status: 'open' },
   dialer: { clientDialer: null, provider: '', direction: null, notes: '', status: 'open' },
-  transferTo: '', recordingSource: '', recordingStatus: 'open',
+  transferTo: '',
+  recordings: { format: null, via: null, schedulerSource: null, schedulerConfig: '', notes: '', status: 'open' },
   checklists: [], processors: [],
 });
 export const newProcessor = (slot: SlotKey): Processor => ({
@@ -52,6 +53,37 @@ const STAGE_TO_SLOT: Record<string, SlotKey> = {
 const str = (value: unknown) => (typeof value === 'string' ? value : '');
 const obj = (value: unknown): Record<string, unknown> => (value && typeof value === 'object' && !Array.isArray(value) ? (value as Record<string, unknown>) : {});
 const arr = (value: unknown): unknown[] => (Array.isArray(value) ? value : []);
+
+const FORMATS: RecordingFormat[] = ['with_metadata', 'without_metadata', 'presigned_url'];
+const VIAS: RecordingVia[] = ['api', 'scheduler'];
+const SCHEDULER_SOURCES: SchedulerSource[] = ['sftp', 's3'];
+
+// Before version 7 a project kept one free-text recordingSource. It becomes the notes, and the picks that map
+// cleanly (our API; an SFTP drop or S3 bucket, which a scheduler reads) carry over.
+function readRecordings(a: Record<string, unknown>): Project['recordings'] {
+  const r = obj(a.recordings);
+  if (a.recordings !== undefined) {
+    const via = VIAS.includes(r.via as RecordingVia) ? (r.via as RecordingVia) : null;
+    return {
+      format: FORMATS.includes(r.format as RecordingFormat) ? (r.format as RecordingFormat) : null,
+      via,
+      schedulerSource: via === 'scheduler' && SCHEDULER_SOURCES.includes(r.schedulerSource as SchedulerSource) ? (r.schedulerSource as SchedulerSource) : null,
+      schedulerConfig: via === 'scheduler' ? str(r.schedulerConfig) : '',
+      notes: str(r.notes),
+      status: status(r.status),
+    };
+  }
+  const legacy = str(a.recordingSource);
+  const via: RecordingVia | null = /speech analytics api/i.test(legacy) ? 'api' : /sftp|s3/i.test(legacy) ? 'scheduler' : null;
+  return {
+    format: null,
+    via,
+    schedulerSource: via === 'scheduler' ? (/sftp/i.test(legacy) ? 'sftp' : 's3') : null,
+    schedulerConfig: '',
+    notes: legacy,
+    status: status(a.recordingStatus),
+  };
+}
 
 export function parseCanvasFile(text: string): CanvasFile {
   let raw: unknown;
@@ -138,8 +170,7 @@ export function parseCanvasFile(text: string): CanvasFile {
         status: status(dialer.status),
       },
       transferTo: str(a.transferTo) || str(hotTransfer.to),
-      recordingSource: str(a.recordingSource),
-      recordingStatus: status(a.recordingStatus),
+      recordings: readRecordings(a),
       checklists,
       // Before the inbound pre call processor existed, inbound projects kept it at "pre call connected".
       processors: direction === 'inbound' && !processors.some(p => p.slot === 'inbound_pre_call')
@@ -147,7 +178,7 @@ export function parseCanvasFile(text: string): CanvasFile {
         : processors,
     };
   });
-  return { version: 6, exportedAt: str(file.exportedAt) || undefined, projects };
+  return { version: 7, exportedAt: str(file.exportedAt) || undefined, projects };
 }
 
 function loadSaved(): CanvasFile {
@@ -205,7 +236,7 @@ export function StoreProvider({ children }: { children: ReactNode }) {
       setDirty(false);
     },
     exportFile: () => {
-      const exported: CanvasFile = { ...file, version: 6, exportedAt: new Date().toISOString() };
+      const exported: CanvasFile = { ...file, version: 7, exportedAt: new Date().toISOString() };
       const blob = new Blob([JSON.stringify(exported, null, 2)], { type: 'application/json' });
       const link = document.createElement('a');
       link.href = URL.createObjectURL(blob);

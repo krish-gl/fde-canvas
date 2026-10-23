@@ -18,7 +18,7 @@ const NODES: Record<NodeId, Box> = {
   inbound_pre_call:   { x: 280, y: 300, w: 280, h: H, label: 'Inbound pre call processor', section: 'voice', path: 'in' },
   during_call:        { x: 660, y: 40,  w: 210, h: H, label: 'During call processors', section: 'voice' },
   transfer:           { x: 900, y: 150, w: 200, h: H, label: 'Transfer call processor', section: 'voice' },
-  recordings:         { x: 0,   y: 600, w: 180, h: H, label: 'Recordings', section: 'analytics' },
+  recordings:         { x: 0,   y: 600, w: 180, h: H, label: 'Recording ingestion', section: 'analytics' },
   cdr:                { x: 240, y: 600, w: 210, h: H, label: 'CDR → recording extraction', section: 'analytics' },
   resource_pre:       { x: 240, y: 750, w: 210, h: H, label: 'Resource listen pre processor (pre-analytics)', section: 'analytics' },
   checklists:         { x: 520, y: 600, w: 300, h: H, label: 'Checklist processing', section: 'analytics' },
@@ -78,7 +78,7 @@ function stateOf(id: NodeId, a: Project, saidNo: Set<string>): State {
     case 'caller': return a.dialer.direction === 'inbound' || a.dialer.direction === 'both' ? a.dialer.status : 'unset';
     case 'dialer': return a.dialer.clientDialer !== null || a.dialer.direction ? a.dialer.status : 'unset';
     // With both products, recordings come from the voice bot's calls through the internal queue: nothing to track.
-    case 'recordings': case 'cdr': return recordingsAutomatic(a) ? 'unset' : a.recordingSource ? a.recordingStatus : 'unset';
+    case 'recordings': case 'cdr': return recordingsAutomatic(a) ? 'unset' : a.recordings.format || a.recordings.via ? a.recordings.status : 'unset';
     case 'checklists': return a.checklists.length ? ofProcessors(a.processors.filter(p => p.checklistId)) ?? 'open' : saidNo.has('checklists') ? 'disabled' : 'unset';
     case 'audit_pre': case 'audit_post': return ofProcessors(slotProcessors(a, id)) ?? 'unset';
     default: {

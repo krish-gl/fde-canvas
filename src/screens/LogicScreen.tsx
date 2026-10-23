@@ -8,12 +8,12 @@ type Kind = 'question' | 'pick' | 'route' | 'end';
 type Section = 'Basics' | 'Voice bot' | 'Speech analytics' | 'Post call';
 type Node = { col: number; row: number; kind: Kind; section?: Section; title: string; options?: string[]; sub?: string; w?: number };
 
-const COLS = [140, 400, 680, 960];
+const COLS = [140, 400, 680, 960, 1240];
 const ROW = 110;
 const SIZE: Record<Kind, { w: number; h: number }> = {
   question: { w: 244, h: 80 }, pick: { w: 244, h: 80 }, route: { w: 176, h: 38 }, end: { w: 244, h: 44 },
 };
-const WORLD = { w: 1100, h: 17 * ROW + 100 };
+const WORLD = { w: 1380, h: 17 * ROW + 100 };
 
 const optionsOf = (id: string) => {
   const step = steps.find(s => s.id === id);
@@ -41,7 +41,9 @@ const NODES = {
   transfer:      { col: 1, row: 12, kind: 'question', section: 'Voice bot', title: 'Is the call ever transferred?', sub: 'Yes: what it transfers to · No' },
   routeProducts: { col: 1, row: 13, kind: 'route',    title: 'Speech analytics too?' },
 
-  recordings:    { col: 3, row: 2,  kind: 'question', section: 'Speech analytics', title: 'Where do recordings come from?', sub: optionsOf('recordings').join(' · ') },
+  recFormat:     { col: 3, row: 2,  kind: 'question', section: 'Speech analytics', title: 'What arrives for each call?', options: optionsOf('recording_format'), w: 330 },
+  recVia:        { col: 3, row: 3,  kind: 'question', section: 'Speech analytics', title: 'What picks the recordings up?', options: optionsOf('recording_via') },
+  scheduler:     { col: 4, row: 4,  kind: 'question', section: 'Speech analytics', title: 'Scheduler: from SFTP or S3?', sub: 'Plus which calls to analyse' },
   resourcePre:   { col: 3, row: 13, kind: 'question', section: 'Speech analytics', title: 'Resource listen pre processor (pre-analytics processor)?', options: YES_NO },
   checklists:    { col: 3, row: 14, kind: 'question', section: 'Speech analytics', title: 'Any checklists mapped?', options: YES_NO },
   parameters:    { col: 3, row: 15, kind: 'question', section: 'Speech analytics', title: 'Parameters, one question per checklist', sub: 'Each parameter: pre / post processor' },
@@ -73,7 +75,7 @@ type Edge = { from: Id; to: Id; route: Route; label?: string };
 const EDGES: Edge[] = [
   { from: 'name', to: 'products', route: 'down' },
   { from: 'products', to: 'direction', route: 'sideDown', label: 'Voice bot · Both' },
-  { from: 'products', to: 'recordings', route: 'sideDown', label: 'Speech analytics' },
+  { from: 'products', to: 'recFormat', route: 'sideDown', label: 'Speech analytics' },
 
   { from: 'direction', to: 'lead', route: 'sideDown', label: 'Outbound · Both' },
   { from: 'direction', to: 'providerIn', route: 'sideDown', label: 'SIP inbound' },
@@ -95,7 +97,10 @@ const EDGES: Edge[] = [
   { from: 'routeProducts', to: 'resourcePre', route: 'across', label: 'Yes: recordings arrive via the internal queue' },
   { from: 'routeProducts', to: 'resourcePost', route: 'downSide', label: 'No' },
 
-  { from: 'recordings', to: 'resourcePre', route: 'down' },
+  { from: 'recFormat', to: 'recVia', route: 'down' },
+  { from: 'recVia', to: 'resourcePre', route: 'down', label: 'Speech analytics API' },
+  { from: 'recVia', to: 'scheduler', route: 'sideDown', label: 'Scheduler' },
+  { from: 'scheduler', to: 'resourcePre', route: 'downSide' },
   { from: 'resourcePre', to: 'checklists', route: 'down' },
   { from: 'checklists', to: 'parameters', route: 'down', label: 'Yes' },
   { from: 'checklists', to: 'resourcePost', route: 'sideDown', label: 'No' },
@@ -120,10 +125,10 @@ function pointsOf({ from, to, route }: Edge): Point[] {
   }
 }
 
-// Labels sit on the first segment: beside a vertical one, above a horizontal one.
+// Labels sit on the first segment: beside a vertical one (near its start when it's long), above a horizontal one.
 function labelAt(points: Point[]): { x: number; y: number; vertical: boolean } {
   const [[x1, y1], [x2, y2]] = points;
-  return x1 === x2 ? { x: x1 + 8, y: Math.min(y1, y2) + Math.abs(y2 - y1) / 2 - 8, vertical: true } : { x: (x1 + x2) / 2, y: y1 - 20, vertical: false };
+  return x1 === x2 ? { x: x1 + 8, y: Math.min(y1, y2) + Math.min(Math.abs(y2 - y1) / 2, 30) - 8, vertical: true } : { x: (x1 + x2) / 2, y: y1 - 20, vertical: false };
 }
 
 export default function LogicScreen() {

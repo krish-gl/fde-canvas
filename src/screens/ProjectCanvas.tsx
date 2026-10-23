@@ -5,7 +5,7 @@ import { ArrowDown, ArrowLeft, ArrowRight, Info, ListChecks, MessagesSquare, Plu
 import { newChecklist, newProcessor, parameterProcessor, useStore } from '../store';
 import { hrefFor, navigate } from '../router';
 import { ConfirmModal } from '../components/Modal';
-import { DIRECTION_LABEL, LEAD_METHODS, PRODUCTS, SLOTS, recordingsAutomatic, type Project, type Checklist, type Processor, type SlotKey, type Status } from '../types';
+import { DIRECTION_LABEL, LEAD_METHODS, PRODUCTS, RECORDING_FORMAT_LABEL, RECORDING_VIA_LABEL, SCHEDULER_SOURCE_LABEL, SLOTS, recordingsAutomatic, type Project, type Checklist, type Processor, type SlotKey, type Status } from '../types';
 import { ProjectPanel, ChecklistPanel, DialerPanel, LeadPanel, ProcessorPanel, RecordingsPanel } from './panels';
 
 export type Selection =
@@ -61,7 +61,7 @@ export default function ProjectCanvas({ projectId }: { projectId: string }) {
   const showAnalytics = project.products.includes('speech_analytics');
 
   const slotProps: SlotHelpers = { inSlot, isSelected, select, addProcessor, setEnabled, setStatus };
-  const { leadIngestion, dialer } = project;
+  const { leadIngestion, dialer, recordings } = project;
   // Direction decides the start of the call. Outbound: leads are ingested, pre-processed and dialled.
   // SIP inbound: there's no lead ingestion; the customer calls in and the inbound pre call processor fetches
   // their details from the client's API instead. Until it's set, the outbound path shows.
@@ -170,8 +170,17 @@ export default function ProjectCanvas({ projectId }: { projectId: string }) {
               {recordingsAutomatic(project)
                 // Both products: the voice bot's calls reach speech analytics through the internal queue. Nothing to set up.
                 ? <Node title="Recordings from"><span className="node-sub">Voice bot calls, via the internal queue. No separate ingestion needed.</span></Node>
-                : <Node status={project.recordingStatus} title="Recordings from" selected={isSelected({ kind: 'recordings' })} onClick={() => select({ kind: 'recordings' })}>
-                  <span className="node-sub">{project.recordingSource || 'Dialer → lead ingestion. Not set'}</span>
+                : <Node status={recordings.status} title="Recording ingestion" selected={isSelected({ kind: 'recordings' })} onClick={() => select({ kind: 'recordings' })}>
+                  {recordings.format || recordings.via
+                    ? <>
+                      <div className="node-chips">
+                        {recordings.format && <span className="node-chip">{RECORDING_FORMAT_LABEL[recordings.format]}</span>}
+                        {recordings.via && <span className="node-chip">{recordings.via === 'scheduler' && recordings.schedulerSource
+                          ? `Scheduler · ${SCHEDULER_SOURCE_LABEL[recordings.schedulerSource]}` : RECORDING_VIA_LABEL[recordings.via]}</span>}
+                      </div>
+                      {recordings.via === 'scheduler' && recordings.schedulerConfig.trim() && <span className="node-sub">{recordings.schedulerConfig.trim().split('\n')[0]}</span>}
+                    </>
+                    : <span className="node-sub">{recordings.notes || 'What arrives, and what picks it up? Not set'}</span>}
                 </Node>}
             </div>
             <Arrow />

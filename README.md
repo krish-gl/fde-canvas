@@ -55,7 +55,9 @@ A fresh copy starts with no projects. The example projects name real clients, so
     - **Both:** both paths, one above the other.
     - Every path joins at During call → *during call processors* (any number); Transfer? → *transfer call processor*.
     - A path that doesn't match the direction is hidden, unless it still holds processors; then it shows with a warning.
-  - **Speech analytics:** recordings (with both products, these are the voice bot's calls, arriving through the internal queue, so there's nothing to set up) → CDR / recording extraction → *resource listen pre processor (pre-analytics processor)*. Then checklist processing: each checklist lists its parameters, and each parameter has a *pre* and a *post processor* switch.
+  - **Speech analytics:** recording ingestion → CDR / recording extraction → *resource listen pre processor (pre-analytics processor)*. Then checklist processing: each checklist lists its parameters, and each parameter has a *pre* and a *post processor* switch.
+    - **With both products,** recordings are the voice bot's calls, arriving through the internal queue, so there's nothing to set up.
+    - **Speech analytics on its own:** what arrives for each call (with metadata, without metadata, or a presigned URL), and what picks it up: the speech analytics API, or a scheduler. A scheduler pulls from SFTP or S3, and its configuration says which calls to analyse (e.g. only calls over 30 seconds, only certain dispositions).
   - **Post call:** the *resource post processor*. This shows whether or not speech analytics is live.
   - **Enabled vs status:** these are two separate settings.
     - **Enabled / disabled** (the switch) says whether a point applies to this project. Disabled processors and unused points are **grey**.
@@ -69,7 +71,7 @@ Never put API keys, tokens or passwords in a processor's description: the file i
 
 ```jsonc
 {
-  "version": 6,
+  "version": 7,
   "exportedAt": "2026-10-23T10:00:00.000Z",
   "projects": [
     {
@@ -84,8 +86,13 @@ Never put API keys, tokens or passwords in a processor's description: the file i
                                                                          // clientDialer: true | false | null
                                                                          // direction: inbound | outbound | both | null
       "transferTo": "",
-      "recordingSource": "Vendor dialer",
-      "recordingStatus": "open",
+      "recordings": {                                                    // speech analytics on its own
+        "format": "with_metadata",                                       // with_metadata | without_metadata | presigned_url | null
+        "via": "scheduler",                                              // api | scheduler | null
+        "schedulerSource": "s3",                                         // sftp | s3 | null (scheduler only)
+        "schedulerConfig": "Only calls longer than 30 seconds",          // scheduler only
+        "notes": "", "status": "open"
+      },
       "checklists": [
         {
           "id": "collections-1001", "name": "Collections - Support", "templateId": "1001", "notes": "",
@@ -125,6 +132,7 @@ You can edit the file by hand. On import:
   - Files from before projects were renamed keep their list under `accounts`; that's still read.
   - Anything without a status starts open.
   - On a SIP inbound project, a *pre call connected* processor from before version 6 becomes the *inbound pre call processor*.
+  - Before version 7, recordings were one free-text `recordingSource`. It becomes the recordings notes; "Our Speech Analytics API" becomes picked up by the API, and an SFTP or S3 source becomes a scheduler on that source. `recordingStatus` becomes the recordings status.
   - Flows, file locations, links and update logs are dropped.
 - A file with no `projects` list, or a project with no name, is rejected with a message, and nothing in the browser changes.
 

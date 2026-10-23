@@ -3,7 +3,10 @@
 // Questions read and write the draft project directly, so the same flow also edits an existing project.
 // docs/question-logic.md and the How it works diagram (screens/LogicScreen.tsx) lay these out: update both when they change.
 import { newChecklist, newParameter, newProcessor, parameterProcessor } from '../store';
-import { LEAD_METHODS, SLOTS, recordingsAutomatic, type Project, type Direction, type LeadMethod, type Processor, type Product, type SlotKey } from '../types';
+import {
+  LEAD_METHODS, RECORDING_FORMAT_LABEL, RECORDING_VIA_LABEL, SCHEDULER_SOURCE_LABEL, SLOTS, recordingsAutomatic,
+  type Project, type Direction, type LeadMethod, type Processor, type Product, type RecordingFormat, type RecordingVia, type SchedulerSource, type SlotKey,
+} from '../types';
 
 export type NodeId =
   | 'lead' | 'pre_call' | 'dialer' | 'no_answer' | 'pre_call_connected' | 'caller' | 'inbound_pre_call' | 'during_call' | 'transfer'
@@ -28,7 +31,11 @@ type Base = {
 
 export type Step =
   | Base & { kind: 'name' }
-  | Base & { kind: 'choice'; options: Option[]; get: (a: Project) => string | undefined; set: (a: Project, value: string) => Project }
+  | Base & {
+      kind: 'choice'; options: Option[]; get: (a: Project) => string | undefined; set: (a: Project, value: string) => Project;
+      // A text box shown under the options once one is picked, e.g. the scheduler's configuration.
+      text?: { label: string; placeholder: string; get: (a: Project) => string; set: (a: Project, text: string) => Project };
+    }
   | Base & {
       kind: 'multi'; options: Option[]; get: (a: Project) => string[]; set: (a: Project, values: string[]) => Project;
       // A list of names asked under the options once one of them is picked, e.g. the connectors behind API.
@@ -48,13 +55,13 @@ const inbound = (a: Project) => hasVoice(a) && (a.dialer.direction === 'inbound'
 const hasAnalytics = (a: Project) => a.products.includes('speech_analytics');
 // With the voice bot as well, recordings arrive from its calls through the internal queue: nothing to ask.
 const recordingsAsked = (a: Project) => hasAnalytics(a) && !recordingsAutomatic(a);
+const schedulerAsked = (a: Project) => recordingsAsked(a) && a.recordings.via === 'scheduler';
 
 const PRODUCT_CHOICE: Record<string, Product[]> = { voicebot: ['voicebot'], speech_analytics: ['speech_analytics'], both: ['voicebot', 'speech_analytics'] };
 const productValue = (a: Project) =>
   a.products.length === 2 ? 'both' : a.products[0] === 'voicebot' ? 'voicebot' : a.products[0] === 'speech_analytics' ? 'speech_analytics' : undefined;
 
 const PROVIDERS = ['Ozonetel', 'Exotel', 'Plivo', 'Airtel', 'Tata Communications', 'Genesys'];
-const RECORDING_SOURCES = ['Our Speech Analytics API', 'Dialer’s S3 bucket', 'Dialer API', 'SFTP', 'They upload to us', 'Their CRM'];
 
 export const steps: Step[] = [
   {
@@ -154,12 +161,42 @@ export const steps: Step[] = [
   },
 
   // Speech analytics
+  // Recordings: only asked for speech analytics on its own. With the voice bot too, they come through the internal queue.
   {
-    id: 'recordings', section: 'Speech analytics', kind: 'choice', focus: ['recordings', 'cdr'], when: recordingsAsked,
-    title: 'Where do the recordings come from?', info: 'Where we pick up the CDR: the call recording plus its metadata.',
-    options: [...RECORDING_SOURCES.map(value => ({ value })), { value: '', label: 'Not sure yet' }],
-    get: a => (a.recordingSource || undefined),
-    set: (a, recordingSource) => ({ ...a, recordingSource }),
+    id: 'recording_format', section: 'Speech analytics', kind: 'choice', focus: ['recordings'], when: recordingsAsked,
+    title: 'What arrives for each call?',
+    info: 'The recording ingestion for speech analytics: what we receive for each call.',
+    options: [
+      { value: 'with_metadata', label: RECORDING_FORMAT_LABEL.with_metadata, hint: 'The recording plus call details', info: 'Each recording comes with its call metadata (agent, disposition, duration…).' },
+      { value: 'without_metadata', label: RECORDING_FORMAT_LABEL.without_metadata, hint: 'Just the audio' },
+      { value: 'presigned_url', label: RECORDING_FORMAT_LABEL.presigned_url, hint: 'A link we download the recording from' },
+    ],
+    get: a => a.recordings.format ?? undefined,
+    set: (a, format) => ({ ...a, recordings: { ...a.recordings, format: format as RecordingFormat } }),
+  },
+  {
+    id: 'recording_via', section: 'Speech analytics', kind: 'choice', focus: ['recordings', 'cdr'], when: recordingsAsked,
+    title: 'What picks the recordings up?',
+    options: [
+      { value: 'api', label: RECORDING_VIA_LABEL.api, hint: 'They push each call to our API' },
+      { value: 'scheduler', label: RECORDING_VIA_LABEL.scheduler, hint: 'We pull them on a schedule from SFTP or S3', info: 'A scheduler picks recordings up from an SFTP server or S3 bucket, filtered by its configuration.' },
+    ],
+    get: a => a.recordings.via ?? undefined,
+    set: (a, via) => ({ ...a, recordings: { ...a.recordings, via: via as RecordingVia } }),
+    note: { get: a => a.recordings.notes, set: (a, notes) => ({ ...a, recordings: { ...a.recordings, notes } }), placeholder: 'Whose system they come from, anything else about them…' },
+  },
+  {
+    id: 'scheduler', section: 'Speech analytics', kind: 'choice', focus: ['recordings', 'cdr'], when: schedulerAsked,
+    title: 'Where does the scheduler pick them up from?',
+    options: [{ value: 'sftp', label: SCHEDULER_SOURCE_LABEL.sftp }, { value: 's3', label: SCHEDULER_SOURCE_LABEL.s3 }],
+    get: a => a.recordings.schedulerSource ?? undefined,
+    set: (a, source) => ({ ...a, recordings: { ...a.recordings, schedulerSource: source as SchedulerSource } }),
+    text: {
+      label: 'Scheduler configuration: which calls to analyse',
+      placeholder: 'e.g. Only calls longer than 30 seconds. Only dispositions Sale and Callback.',
+      get: a => a.recordings.schedulerConfig,
+      set: (a, schedulerConfig) => ({ ...a, recordings: { ...a.recordings, schedulerConfig } }),
+    },
   },
   {
     id: 'resource_pre', section: 'Speech analytics', kind: 'processor', slot: 'resource_pre', focus: ['resource_pre'], when: hasAnalytics,

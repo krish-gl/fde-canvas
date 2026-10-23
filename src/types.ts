@@ -7,6 +7,10 @@
 export type Product = 'voicebot' | 'speech_analytics';
 export type LeadMethod = 'api' | 'sftp' | 'manual' | 's3';
 export type Direction = 'inbound' | 'outbound' | 'both';
+// Speech analytics on its own: what arrives for each call, and what picks it up.
+export type RecordingFormat = 'with_metadata' | 'without_metadata' | 'presigned_url';
+export type RecordingVia = 'api' | 'scheduler';
+export type SchedulerSource = 'sftp' | 's3';
 
 // Two separate things. Enabled: does this point apply to the project at all (disabled is greyed out).
 // Status: is the work on it done. Only meaningful while enabled: open is red, closed is green.
@@ -46,13 +50,21 @@ export type Project = {
   leadIngestion: { methods: LeadMethod[]; connectors: string[]; notes: string; status: Status };
   dialer: { clientDialer: boolean | null; provider: string; direction: Direction | null; notes: string; status: Status };
   transferTo: string;
-  recordingSource: string;      // where CDRs / recordings come from, for speech analytics
-  recordingStatus: Status;
+  // How recordings reach speech analytics on its own. With the voice bot too, they come through the internal queue
+  // and none of this applies (see recordingsAutomatic).
+  recordings: {
+    format: RecordingFormat | null;
+    via: RecordingVia | null;
+    schedulerSource: SchedulerSource | null;   // scheduler only
+    schedulerConfig: string;                   // scheduler only: which calls to analyse, e.g. duration or disposition filters
+    notes: string;
+    status: Status;
+  };
   checklists: Checklist[];
   processors: Processor[];
 };
 
-export type CanvasFile = { version: 6; exportedAt?: string; projects: Project[] };
+export type CanvasFile = { version: 7; exportedAt?: string; projects: Project[] };
 
 // With both products, speech analytics gets the voice bot's own calls through an internal queue, so there's no
 // recording source to set up. Recording source and status only apply to speech analytics on its own.
@@ -70,6 +82,12 @@ export const LEAD_METHODS: Array<{ key: LeadMethod; label: string }> = [
   { key: 'manual', label: 'Manual' },
   { key: 's3', label: 'S3 push' },
 ];
+
+export const RECORDING_FORMAT_LABEL: Record<RecordingFormat, string> = {
+  with_metadata: 'With metadata', without_metadata: 'Without metadata', presigned_url: 'Presigned URL',
+};
+export const RECORDING_VIA_LABEL: Record<RecordingVia, string> = { api: 'Speech analytics API', scheduler: 'Scheduler' };
+export const SCHEDULER_SOURCE_LABEL: Record<SchedulerSource, string> = { sftp: 'SFTP', s3: 'S3' };
 
 export const DIRECTION_LABEL: Record<Direction, string> = { inbound: 'SIP inbound', outbound: 'Outbound', both: 'Inbound + outbound' };
 

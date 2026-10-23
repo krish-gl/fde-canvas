@@ -31,7 +31,13 @@ function summary(step: Step, a: Project, saidNo: Set<string>): string {
   const firstLine = (text: string) => text.split('\n')[0].slice(0, 80);
   switch (step.kind) {
     case 'name': return a.name || '—';
-    case 'choice': { const v = step.get(a); const o = step.options.find(o => o.value === v); return v === undefined ? '—' : o?.label ?? (v || 'Not sure'); }
+    case 'choice': {
+      const v = step.get(a);
+      if (v === undefined) return '—';
+      const label = step.options.find(o => o.value === v)?.label ?? (v || 'Not sure');
+      const text = step.text?.get(a).trim();
+      return text ? `${label} · ${firstLine(text)}` : label;
+    }
     case 'multi': {
       const v = step.get(a);
       if (!v.length) return '—';
@@ -64,6 +70,8 @@ function tidy(a: Project): Project {
     ...a,
     name: a.name.trim(),
     // Connectors only mean something while leads come in by API.
+    // Scheduler details only mean something while a scheduler picks the recordings up.
+    recordings: a.recordings.via === 'scheduler' ? { ...a.recordings, schedulerConfig: a.recordings.schedulerConfig.trim() } : { ...a.recordings, schedulerSource: null, schedulerConfig: '' },
     leadIngestion: { ...a.leadIngestion, connectors: a.leadIngestion.methods.includes('api') ? a.leadIngestion.connectors.map(c => c.trim()).filter(Boolean) : [] },
     checklists: a.checklists
       .filter(c => c.name.trim() || c.templateId.trim() || c.parameters.length)
@@ -103,7 +111,7 @@ export default function IntakeFlow({ projectId }: { projectId?: string }) {
   // Picking an option. Single choices move on by themselves unless a note is being written;
   // a "yes" to a processor stays put so its "what does it do?" can be filled in.
   const choose = (value: string) => {
-    if (step.kind === 'choice') { update(a => step.set(a, value)); if (!noteOpen) advanceSoon(); }
+    if (step.kind === 'choice') { update(a => step.set(a, value)); if (!noteOpen && !step.text) advanceSoon(); }
     else if (step.kind === 'multi') { const cur = step.get(project); update(a => step.set(a, cur.includes(value) ? cur.filter(v => v !== value) : [...cur, value])); }
     else if (step.kind === 'processor') {
       if (value === 'yes') { update(a => enableSlot(a, step.slot)); markNo(step.slot, false); }
@@ -204,6 +212,11 @@ export default function IntakeFlow({ projectId }: { projectId?: string }) {
                 <input className="field" placeholder={step.extra.placeholder} value={step.extra.get(project)} onChange={e => update(a => step.extra!.set(a, e.target.value))} /></label>}
             </div>;
           })()}
+
+          {step.kind === 'choice' && step.text && step.get(project) !== undefined && <div className="intake-fields">
+            <label className="intake-field"><span className="field-label">{step.text.label}</span>
+              <textarea autoFocus={!step.text.get(project)} className="field" rows={4} placeholder={step.text.placeholder} value={step.text.get(project)} onChange={e => update(a => step.text!.set(a, e.target.value))} /></label>
+          </div>}
 
           {step.kind === 'multi' && step.list && step.get(project).includes(step.list.showFor) && <NameRows list={step.list} project={project} update={update} />}
 

@@ -47,12 +47,14 @@ SIP inbound has no lead ingestion: question 10 (the inbound pre call processor c
 
 | # | Question | Asked when | Type | Writes to |
 |---|---|---|---|---|
-| 13 | Where do the recordings come from? | Speech analytics **only** (not with both products) | One of: Our Speech Analytics API, Dialer’s S3 bucket, Dialer API, SFTP, They upload to us, Their CRM, Not sure yet | `recordingSource` |
+| 13a | What arrives for each call? | Speech analytics **only** (not with both products) | One of: With metadata / Without metadata / Presigned URL | `recordings.format` |
+| 13b | What picks the recordings up? | Speech analytics **only** | One of: Speech analytics API / Scheduler, plus optional note | `recordings.via`, `recordings.notes` |
+| 13c | Where does the scheduler pick them up from? | Speech analytics only, and Scheduler picked in 13b | One of: SFTP / S3, then a **Scheduler configuration** text box for which calls to analyse (e.g. only calls longer than 30 seconds, only certain dispositions) | `recordings.schedulerSource`, `recordings.schedulerConfig` |
 | 14 | Is there a resource listen pre processor (pre-analytics processor)? | Speech analytics | Processor yes/no | `resource_pre` processor |
 | 15 | Are any checklists mapped? | Speech analytics | Yes/no, then rows of checklist name + template ID | `checklists` |
 | 15.n | Which parameters of *checklist n* have processors? | One per checklist from 15 | Rows of parameter name + audit parameter ID, each with a Pre processor and Post processor switch and “What does it do?” | the checklist's `parameters`, `audit_pre` / `audit_post` processors |
 
-**Both products:** speech analytics gets the voice bot's own calls through the internal queue, so there's no separate recording source and question 13 isn't asked. On the canvas the Recordings box reads “Voice bot calls, via the internal queue” with no status and can't be edited. Any `recordingSource` already stored is kept, and comes back if the project goes back to speech analytics only.
+**Both products:** speech analytics gets the voice bot's own calls through the internal queue, so there's no recording ingestion to set up and questions 13a–13c aren't asked. On the canvas the Recordings box reads “Voice bot calls, via the internal queue” with no status and can't be edited. Recording details already stored are kept, and come back if the project goes back to speech analytics only.
 
 ### Post call
 
@@ -62,7 +64,7 @@ SIP inbound has no lead ingestion: question 10 (the inbound pre call processor c
 
 ## Answer types
 
-- **One of (choice):** picks a single value. The flow moves to the next question on its own about 0.3 s later, unless the question's note box is open.
+- **One of (choice):** picks a single value. The flow moves to the next question on its own about 0.3 s later, unless the question's note box is open or the question has a text box (13c's scheduler configuration), which appears once an option is picked.
 - **Pick any (multi):** toggles values on and off. It doesn't move on by itself; press Continue or Enter.
 - **Processor yes/no:**
   - **Yes** switches the slot's processor on, creating it if it doesn't exist, and shows “What does it do?” and an optional name. It stays on the question so they can be filled in.
@@ -77,7 +79,7 @@ SIP inbound has no lead ingestion: question 10 (the inbound pre call processor c
 - Only the **name** and **products** are required. Every other question can be skipped; the button reads **Skip** until it's answered, then **Continue**.
 - A question counts as answered when:
   - text: the name isn't blank
-  - one of: a value is picked. On the provider question, “Other / not sure” only counts once the dialer question has been answered too; on the recordings question, “Not sure yet” doesn't count.
+  - one of: a value is picked. On the provider question, “Other / not sure” only counts once the dialer question has been answered too.
   - pick any: at least one is picked
   - processor yes/no and processor list: a processor exists in the slot (enabled = yes, disabled = no), or No was clicked in this session
   - checklists: at least one checklist, or No was clicked in this session
@@ -87,7 +89,7 @@ SIP inbound has no lead ingestion: question 10 (the inbound pre call processor c
 ## Changing earlier answers
 
 - Hidden questions keep their data. Switching direction from Outbound to SIP inbound hides the outbound questions but doesn't delete their processors; the canvas shows that path with a warning while it still holds processors.
-- Unpicking API keeps the connectors while you're in the flow, but they're cleared on save (see below).
+- Unpicking API keeps the connectors while you're in the flow, but they're cleared on save (see below). The same goes for the scheduler's source and configuration when Speech analytics API is picked instead of Scheduler.
 
 ## Saving
 
@@ -99,6 +101,7 @@ On save, the project is tidied:
 - Checklists with no name, no template ID and no parameters are dropped; the rest are trimmed, and an unnamed one becomes “Untitled checklist”. Parameters with no name and no audit ID are dropped.
 - Empty rows in the during call list (no name, no description) are dropped; any other unnamed processor becomes “Unnamed processor”.
 - Connectors are trimmed and blanks dropped. If API isn't a lead method, connectors are cleared.
+- If recordings aren't picked up by a scheduler, the scheduler source and configuration are cleared; otherwise the configuration is trimmed.
 
 Everything new starts **open** (red); status is changed on the canvas, not in the questions.
 
@@ -114,4 +117,4 @@ Each question names the diagram boxes it's about; the diagram pans to them and l
 - **Grey:** said no, or the section / path doesn't apply (product not selected, or the other call direction)
 - **Red:** enabled and open
 - **Green:** enabled and closed (a box with several processors is green only when all are closed)
-- **Neutral:** not answered yet. With both products, Recordings and CDR extraction stay neutral, since they're automatic.
+- **Neutral:** not answered yet. With both products, Recording ingestion and CDR extraction stay neutral, since they're automatic.

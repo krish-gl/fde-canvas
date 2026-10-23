@@ -4,7 +4,10 @@ import { useStore } from '../store';
 import { navigate } from '../router';
 import { ConfirmModal } from '../components/Modal';
 import { ProductPicker, SelectField, StatusControl, TextArea, TextField, Toggle } from '../components/fields';
-import { DIRECTION_LABEL, LEAD_METHODS, SLOTS, type Project, type Direction, type Processor } from '../types';
+import {
+  DIRECTION_LABEL, LEAD_METHODS, RECORDING_FORMAT_LABEL, RECORDING_VIA_LABEL, SCHEDULER_SOURCE_LABEL, SLOTS,
+  type Project, type Direction, type Processor, type RecordingFormat, type RecordingVia, type SchedulerSource,
+} from '../types';
 import { addParameter, removeParameter, setParameter } from '../intake/questions';
 import type { Selection } from './ProjectCanvas';
 
@@ -100,10 +103,24 @@ export function DialerPanel({ project, update, onClose }: { project: Project; up
 }
 
 export function RecordingsPanel({ project, update, onClose }: { project: Project; update: Update; onClose: () => void }) {
+  const rec = project.recordings;
+  const set = (patch: Partial<Project['recordings']>) => update(a => ({ ...a, recordings: { ...a.recordings, ...patch } }));
+  const choices = <K extends string>(labels: Record<K, string>) =>
+    [{ value: '' as const, label: 'Not set' }, ...(Object.keys(labels) as K[]).map(k => ({ value: k, label: labels[k] }))];
   return <div>
-    <PanelHead kicker="Speech analytics" title="Recordings from" onClose={onClose} />
-    <StatusControl value={project.recordingStatus} onChange={recordingStatus => update(a => ({ ...a, recordingStatus }))} />
-    <TextArea label="Where CDRs and recordings come from" value={project.recordingSource} placeholder="e.g. their dialer’s S3 bucket, SF, an SFTP drop…" onChange={recordingSource => update(a => ({ ...a, recordingSource }))} />
+    <PanelHead kicker="Speech analytics" title="Recording ingestion" onClose={onClose} />
+    <StatusControl value={rec.status} onChange={status => set({ status })} />
+    <SelectField label="What arrives for each call" value={rec.format ?? ''} options={choices(RECORDING_FORMAT_LABEL)}
+      onChange={v => set({ format: (v || null) as RecordingFormat | null })} />
+    <SelectField label="Picked up by" value={rec.via ?? ''} options={choices(RECORDING_VIA_LABEL)}
+      onChange={v => set({ via: (v || null) as RecordingVia | null })} />
+    {rec.via === 'scheduler' && <>
+      <SelectField label="Scheduler picks them up from" value={rec.schedulerSource ?? ''} options={choices(SCHEDULER_SOURCE_LABEL)}
+        onChange={v => set({ schedulerSource: (v || null) as SchedulerSource | null })} />
+      <TextArea label="Scheduler configuration: which calls to analyse" rows={5} value={rec.schedulerConfig}
+        placeholder="e.g. Only calls longer than 30 seconds. Only dispositions Sale and Callback." onChange={schedulerConfig => set({ schedulerConfig })} />
+    </>}
+    <TextArea label="Notes" value={rec.notes} placeholder="Whose system they come from, anything else about them…" onChange={notes => set({ notes })} />
   </div>;
 }
 

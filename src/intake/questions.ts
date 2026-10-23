@@ -98,7 +98,7 @@ export const steps: Step[] = [
   {
     id: 'direction', section: 'Voice bot', kind: 'choice', focus: ['lead', 'dialer', 'caller', 'inbound_pre_call'], when: hasVoice,
     title: 'Which way do the calls go?',
-    info: 'This decides how the call starts, so the next questions depend on it. A project is one or the other, not both.',
+    info: 'This decides how the call starts, so the next questions depend on it.',
     options: [
       { value: 'outbound', label: 'Outbound', hint: 'We call the leads', info: 'Leads are ingested, can go through a pre call processor, then the dialer calls them. Some won’t pick up.' },
       { value: 'inbound', label: 'Inbound', hint: 'Customers call in', info: 'No lead ingestion. When a customer calls in, the inbound pre call processor calls the client’s API and enriches the lead attributes used during the call.' },

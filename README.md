@@ -47,7 +47,7 @@ A fresh copy starts with no projects. The example projects name real clients, so
   - **Checklists:** you list your checklists, then answer one question per checklist for its parameters and their pre and post processors.
   - **Review:** a review screen at the end lets you click any answer to change it.
 - **Project canvas:** the call architecture with this project's processors in place.
-  - **Voice bot:** first how the call reaches the bot (SIP, PSTN or WSB), which applies to either path. Then the direction, outbound or inbound (never both), which decides how the call starts.
+  - **Voice bot:** first how the call reaches the bot (SIP, PSTN or WSB), which applies to either path. Then the direction, outbound or inbound, which decides how the call starts.
     - **Outbound:** lead ingestion (API, SFTP, manual, S3 push; with API you also list the connectors, as many as there are) → *pre call processor* → dialer (the client's or ours, and the provider). The dialer branches two ways:
       - doesn't pick up → *no answer call processor*
       - picks up → *pre call connected processor*

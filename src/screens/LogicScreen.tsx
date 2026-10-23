@@ -27,7 +27,7 @@ const NODES = {
   products:      { col: 2, row: 1,  kind: 'question', section: 'Basics', title: 'What’s live on this project?', options: optionsOf('products'), w: 290 },
 
   connection:    { col: 1, row: 2,  kind: 'question', section: 'Voice bot', title: 'How does the call reach the bot?', options: optionsOf('connection') },
-  direction:     { col: 1, row: 3,  kind: 'question', section: 'Voice bot', title: 'Which way do the calls go? (never both)', options: optionsOf('direction') },
+  direction:     { col: 1, row: 3,  kind: 'question', section: 'Voice bot', title: 'Which way do the calls go?', options: optionsOf('direction') },
   lead:          { col: 0, row: 4,  kind: 'pick',     section: 'Voice bot', title: 'How do leads reach us?', options: optionsOf('lead') },
   routeApi:      { col: 0, row: 5,  kind: 'route',    title: 'API picked?' },
   connectors:    { col: 1, row: 5,  kind: 'question', section: 'Voice bot', title: 'Which connectors send them?', sub: 'Any number of names' },
